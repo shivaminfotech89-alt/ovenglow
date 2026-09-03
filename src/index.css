@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@layer utilities {
+  @keyframes slowSpin {
+    0% {
+      transform: rotateX(12deg) rotateY(0deg);
+    }
+    100% {
+      transform: rotateX(12deg) rotateY(360deg);
+    }
+  }
+
+  .animate-slow-spin {
+    animation: slowSpin 20s linear infinite;
+  }
+
+  @keyframes ovenGlowBreathe {
+    0%, 100% {
+      opacity: 0.45;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.75;
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes ovenFlameFlicker {
+    0%, 100% {
+      opacity: 0.85;
+      transform: scaleY(1) scaleX(1);
+    }
+    25% {
+      opacity: 0.95;
+      transform: scaleY(1.04) scaleX(0.98);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scaleY(0.97) scaleX(1.02);
+    }
+    75% {
+      opacity: 1;
+      transform: scaleY(1.05) scaleX(0.99);
+    }
+  }
+
+  @keyframes emberRise {
+    0% {
+      transform: translateY(0) translateX(0) scale(0.6);
+      opacity: 0;
+    }
+    20% {
+      opacity: 0.8;
+    }
+    80% {
+      opacity: 0.6;
+    }
+    100% {
+      transform: translateY(-80px) translateX(12px) scale(1.1);
+      opacity: 0;
+    }
+  }
+
+  .animate-oven-glow {
+    animation: ovenGlowBreathe 5s ease-in-out infinite;
+  }
+
+  .animate-flame-flicker {
+    animation: ovenFlameFlicker 3s ease-in-out infinite;
+  }
+
+  .animate-ember-rise {
+    animation: emberRise 4s ease-out infinite;
+  }
+}
+
+/* Custom Scrollbar for Bold Typography Aesthetic */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FFF9F2;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #EAD7C5;
+  border-radius: 4px;
+  border: 1px solid #FFDAB9;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FF9933;
+}
+

@@ -1,0 +1,381 @@
+import React, { useState } from 'react';
+import { useStore } from '../context/StoreContext';
+import { ProductCard } from './ProductCard';
+import { Product } from '../types';
+import { 
+  Sparkles, 
+  Search, 
+  Filter, 
+  Flame, 
+  Gift, 
+  Cake, 
+  Layers, 
+  ArrowRight,
+  ShieldCheck,
+  X
+} from 'lucide-react';
+
+interface ShopViewProps {
+  onOpenProductDetails: (product: Product) => void;
+}
+
+export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
+  const { 
+    products, 
+    selectedCategory, 
+    setSelectedCategory, 
+    searchQuery, 
+    setSearchQuery, 
+    isVegOnly,
+    storeSettings
+  } = useStore();
+
+  const categories = [
+    { id: 'all', label: 'All Confections', icon: Sparkles },
+    { id: 'artisanal-chocolates', label: 'Artisanal Chocolates', icon: Layers },
+    { id: 'truffles-bonbons', label: 'Truffles & Bonbons', icon: Gift },
+    { id: 'gourmet-cakes', label: 'Gourmet Cakes', icon: Cake },
+    { id: 'bakery-pastries', label: 'Bakery & Pastries', icon: Flame },
+    { id: 'festive-hampers', label: 'Festive Hampers', icon: Gift },
+  ];
+
+  // Filtering
+  const filteredProducts = products.filter((p) => {
+    const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+    const matchesVeg = !isVegOnly || p.isVeg;
+    const matchesSearch = 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.hindiSubname && p.hindiSubname.includes(searchQuery)) ||
+      p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.flavorNotes.some((n) => n.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    return matchesCategory && matchesVeg && matchesSearch;
+  });
+
+  return (
+    <div id="shop-view-container" className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+      
+      {/* Light Atmospheric Hearth & Oven Glow spreading across the Hero Page Canvas Background */}
+      <div className="relative">
+        <div 
+          aria-hidden="true" 
+          className="absolute -top-16 left-1/2 -translate-x-1/2 w-[96%] max-w-6xl h-96 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#FF9933]/15 via-[#E5A93C]/8 to-transparent rounded-full blur-3xl pointer-events-none -z-10 animate-oven-glow" 
+        />
+        <div 
+          aria-hidden="true" 
+          className="absolute -top-6 right-6 sm:right-16 w-80 sm:w-[480px] h-80 sm:h-[480px] bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-[#FF7A18]/16 via-[#E5A93C]/8 to-transparent rounded-full blur-3xl pointer-events-none -z-10" 
+        />
+        <div 
+          aria-hidden="true" 
+          className="absolute -bottom-8 left-8 sm:left-20 w-72 sm:w-96 h-40 bg-[radial-gradient(ellipse,_var(--tw-gradient-stops))] from-[#E5A93C]/10 via-[#FF9933]/5 to-transparent rounded-full blur-2xl pointer-events-none -z-10" 
+        />
+
+        {/* Hero Showcase Banner - Haute Confectionery with Ambient Light Deck-Oven Glow */}
+        <div 
+          id="hero-showcase-banner"
+          className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#1C0E08] via-[#2A140B] to-[#120704] text-white border border-[#48281B] shadow-[0_20px_50px_-15px_rgba(229,169,60,0.18),0_0_35px_-5px_rgba(255,122,24,0.12)] p-6 sm:p-10 md:p-12"
+        >
+          {/* ========================================================= */}
+          {/* LIGHT OVEN GLOW BACKGROUND LAYERS */}
+          {/* ========================================================= */}
+
+          {/* 1. Primary Gentle Hearth Radiant Glow */}
+          <div 
+            aria-hidden="true"
+            className="absolute right-0 bottom-0 w-[420px] sm:w-[580px] md:w-[700px] h-[300px] sm:h-[400px] rounded-full pointer-events-none opacity-85"
+            style={{
+              background: 'radial-gradient(ellipse at 80% 90%, rgba(255, 120, 30, 0.24) 0%, rgba(229, 169, 60, 0.16) 32%, rgba(197, 137, 64, 0.08) 55%, transparent 75%)'
+            }}
+          />
+
+          {/* 2. Secondary Breathing Oven Hearth Glow (Soft pulsation) */}
+          <div 
+            aria-hidden="true"
+            className="absolute -right-16 -bottom-16 w-80 sm:w-[480px] h-80 sm:h-[480px] rounded-full bg-gradient-to-tl from-[#FF7A18]/20 via-[#E5A93C]/12 to-transparent blur-3xl pointer-events-none animate-oven-glow"
+          />
+
+          {/* 3. Subtle Warm Ambient Floor Spill from the Oven Mouth */}
+          <div 
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#FF9933]/12 via-[#E5A93C]/5 to-transparent pointer-events-none"
+          />
+
+          {/* 4. Artistic Deck-Oven Hearth Silhouette in the Background (Right side) */}
+          <div 
+            aria-hidden="true"
+            className="absolute right-0 sm:right-6 md:right-12 bottom-0 w-64 sm:w-80 md:w-96 h-56 sm:h-72 pointer-events-none select-none opacity-45 md:opacity-65 transition-opacity"
+          >
+            {/* Deck Oven Arched Hearth Graphic */}
+            <svg viewBox="0 0 320 240" className="w-full h-full" fill="none">
+              <defs>
+                {/* Hearth Firelight Gradients */}
+                <radialGradient id="ovenHearthGlow" cx="50%" cy="85%" r="70%">
+                  <stop offset="0%" stopColor="#FFF4DE" stopOpacity="0.95" />
+                  <stop offset="25%" stopColor="#FFB347" stopOpacity="0.75" />
+                  <stop offset="55%" stopColor="#FF6B1A" stopOpacity="0.45" />
+                  <stop offset="85%" stopColor="#8A2B0E" stopOpacity="0.2" />
+                  <stop offset="100%" stopColor="#1A0D08" stopOpacity="0" />
+                </radialGradient>
+
+                <linearGradient id="ovenArchStone" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#4A2A1D" stopOpacity="0.65" />
+                  <stop offset="50%" stopColor="#361C13" stopOpacity="0.85" />
+                  <stop offset="100%" stopColor="#24110A" stopOpacity="0.95" />
+                </linearGradient>
+
+                <linearGradient id="flameBeam" x1="50%" y1="100%" x2="50%" y2="0%">
+                  <stop offset="0%" stopColor="#FF9933" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#FF9933" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+
+              {/* Radiant Hearth Light Core */}
+              <path
+                d="M 50,240 A 110,110 0 0,1 270,240 Z"
+                fill="url(#ovenHearthGlow)"
+                className="animate-flame-flicker"
+              />
+
+              {/* Deck Oven Stone Arch Frame */}
+              <path
+                d="M 35,240 A 125,125 0 0,1 285,240 L 265,240 A 105,105 0 0,0 55,240 Z"
+                fill="url(#ovenArchStone)"
+                stroke="#6B3B26"
+                strokeWidth="1.5"
+                strokeOpacity="0.45"
+              />
+
+              {/* Refractory brick mortar grooves on arch */}
+              <path
+                d="M 80,165 L 68,155 M 115,130 L 108,116 M 160,116 L 160,102 M 205,130 L 212,116 M 240,165 L 252,155"
+                stroke="#E5A93C"
+                strokeWidth="1.5"
+                strokeOpacity="0.35"
+              />
+
+              {/* Radiant Heat Rays emanating from oven mouth */}
+              <polygon points="160,180 80,240 240,240" fill="url(#flameBeam)" />
+
+              {/* Warm Baking Deck Floor Line */}
+              <line x1="40" y1="236" x2="280" y2="236" stroke="#FF9933" strokeWidth="2.5" strokeOpacity="0.6" />
+              <line x1="70" y1="232" x2="250" y2="232" stroke="#FFF2D6" strokeWidth="1.5" strokeOpacity="0.45" />
+            </svg>
+
+            {/* Floating Warm Micro-Embers Rising from the Oven */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <span 
+                className="absolute bottom-6 left-1/3 w-1.5 h-1.5 rounded-full bg-[#FFB347] shadow-[0_0_8px_#FF9933] animate-ember-rise"
+                style={{ animationDelay: '0s', animationDuration: '3.8s' }} 
+              />
+              <span 
+                className="absolute bottom-8 left-1/2 w-1 h-1 rounded-full bg-[#FFE5B4] shadow-[0_0_6px_#FF9933] animate-ember-rise" 
+                style={{ animationDelay: '1.2s', animationDuration: '4.2s' }} 
+              />
+              <span 
+                className="absolute bottom-5 right-1/3 w-1.5 h-1.5 rounded-full bg-[#FF8C38] shadow-[0_0_8px_#E25822] animate-ember-rise" 
+                style={{ animationDelay: '2.3s', animationDuration: '3.6s' }} 
+              />
+              <span 
+                className="absolute bottom-10 left-[42%] w-1 h-1 rounded-full bg-[#FFD700] shadow-[0_0_6px_#FF9933] animate-ember-rise" 
+                style={{ animationDelay: '0.7s', animationDuration: '4.6s' }} 
+              />
+            </div>
+          </div>
+
+          {/* 5. Subtle Top-Right Oven Temperature Indicator */}
+          <div className="hidden sm:inline-flex items-center gap-2 absolute top-6 right-8 px-3.5 py-1.5 rounded-full bg-[#241510]/70 backdrop-blur-md border border-[#E5A93C]/30 text-[#E5A93C] text-[11px] font-medium shadow-sm z-10 select-none">
+            <span className="w-2 h-2 rounded-full bg-[#FF7A18] animate-pulse shadow-[0_0_8px_#FF7A18]" />
+            <span>Deck Oven Hearth • 210°C Live Glow</span>
+          </div>
+
+          {/* Left Hero Content */}
+          <div className="relative z-10 max-w-2xl space-y-4">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#E5A93C] text-[11px] font-semibold tracking-wider uppercase">
+              <Sparkles className="w-3.5 h-3.5 text-[#E5A93C]" />
+              <span>Pure Malabar Cocoa Butter • Small-Batch {storeSettings.city} Kitchen</span>
+            </div>
+
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold text-white tracking-tight leading-[1.08]">
+              Artisanal Chocolates <br className="hidden sm:inline" />
+              <span className="italic font-normal text-[#E5A93C]">& Deck-Oven Delights</span>
+            </h1>
+
+            <p className="text-[#D4C5B9] text-xs sm:text-sm md:text-base font-normal leading-relaxed max-w-xl">
+              Single-estate cocoa bars hand-tempered to perfection, Kashmiri saffron truffles, and warm deck-oven lava cakes. Shipped across 500+ Indian cities in insulated cold-chain thermal packaging.
+            </p>
+
+            {/* Quick Action Buttons */}
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => {
+                  document.getElementById('product-catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="px-6 py-3 bg-[#E5A93C] hover:bg-[#D99A2B] text-[#241510] font-bold rounded-full shadow-md text-xs sm:text-sm flex items-center gap-2 transition-all active:scale-95"
+              >
+                <span>Explore Confections</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="flex items-center gap-2 px-4 py-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 text-xs font-medium text-[#E8DFD8]">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Complimentary Express Cold-Chain over ₹499</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Filter & Active Top-Bar Search Section */}
+      <div className="space-y-3">
+        {/* Categories Pill Navigation */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {categories.map((cat) => {
+            const Icon = cat.icon;
+            const isSelected = selectedCategory === cat.id;
+
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-4 py-2 rounded-full text-xs font-medium shrink-0 flex items-center gap-1.5 transition-all select-none border ${
+                  isSelected 
+                    ? 'bg-[#2A1810] text-white border-[#2A1810] shadow-sm' 
+                    : 'bg-white border-[#E8DFD8] text-[#5C4033] hover:border-[#2A1810] hover:text-[#2A1810]'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-[#E5A93C]' : 'text-[#8C766B]'}`} />
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active Top Bar Search Banner */}
+        {searchQuery.trim() && (
+          <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E8DFD8] text-xs transition-all">
+            <div className="flex items-center gap-2">
+              <Search className="w-3.5 h-3.5 text-[#C58940]" />
+              <span className="text-[#5C4033]">
+                Searching for <strong className="text-[#241510]">"{searchQuery}"</strong>
+              </span>
+              <span className="text-[11px] text-[#8C766B]">
+                ({filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'} found)
+              </span>
+            </div>
+            <button
+              onClick={() => setSearchQuery('')}
+              className="text-xs text-[#8C766B] hover:text-[#241510] font-medium flex items-center gap-1 transition-colors underline"
+            >
+              <span>Clear search</span>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Product Grid */}
+      <div id="product-catalog-grid">
+        <div className="flex items-center justify-between mb-3 sm:mb-4 px-0.5">
+          <span className="text-xs font-medium text-[#8C766B]">
+            Showing {filteredProducts.length} handcrafted confections
+          </span>
+
+          {isVegOnly && (
+            <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-600" />
+              100% Eggless Only
+            </span>
+          )}
+        </div>
+
+        {filteredProducts.length === 0 ? (
+          <div className="p-10 text-center rounded-2xl bg-white border border-[#E8DFD8] space-y-3">
+            <p className="text-lg text-[#2A1810] font-serif font-bold">No confections found</p>
+            <p className="text-xs text-[#8C766B]">
+              Try searching for "saffron", "brownie", or resetting your category filter.
+            </p>
+            <button
+              onClick={() => {
+                setSelectedCategory('all');
+                setSearchQuery('');
+              }}
+              className="mt-2 px-5 py-2 rounded-full bg-[#2A1810] text-white font-medium text-xs shadow-sm hover:bg-[#3D2317]"
+            >
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onOpenDetails={onOpenProductDetails}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Founder's Craft Note & Kitchen Guarantee */}
+      <div className="rounded-2xl sm:rounded-3xl bg-[#FAF5EE] border border-[#EADBCE] p-6 sm:p-10 space-y-6">
+        <div className="max-w-3xl space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E8DFD8] text-[11px] font-semibold text-[#5C4033]">
+            <Sparkles className="w-3.5 h-3.5 text-[#C58940]" />
+            <span>From Our Master Chocolatier & Founding Team</span>
+          </div>
+
+          <h3 className="text-2xl sm:text-3xl font-serif font-bold text-[#2A1810] tracking-tight">
+            The Ovenglow Standard: Pure Cacao, Deck Ovens & Zero Compound Fats
+          </h3>
+
+          <p className="text-xs sm:text-sm text-[#6B574E] leading-relaxed">
+            Every batch at Ovenglow begins with single-estate cacao from the Malabar coast, pure cocoa butter, and authentic Kashmiri saffron. We never substitute cocoa butter with hydrogenated vegetable fats or palm oil. Our molten cakes and soft-center cookies are baked daily in stone-deck ovens and dispatched in insulated thermal foil with ice cooling gels.
+          </p>
+        </div>
+
+        {/* 4 Craft Pillars */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+          <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
+            <span className="font-serif font-bold text-sm text-[#2A1810] block">Pure Cocoa Butter</span>
+            <p className="text-[11px] text-[#8C766B]">Strictly zero palm oils or compound substitutes.</p>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
+            <span className="font-serif font-bold text-sm text-[#2A1810] block">Deck Oven Fresh</span>
+            <p className="text-[11px] text-[#8C766B]">Baked daily in small batches in our stone-deck hearth ovens.</p>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
+            <span className="font-serif font-bold text-sm text-[#2A1810] block">Cold-Chain Thermal Pack</span>
+            <p className="text-[11px] text-[#8C766B]">Insulated foil and food-grade ice gels across India.</p>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
+            <span className="font-serif font-bold text-sm text-[#2A1810] block">FSSAI Certified</span>
+            <p className="text-[11px] text-[#8C766B]">
+              {storeSettings.fssaiLicense ? `Lic. ${storeSettings.fssaiLicense}` : 'Certified Gourmet Atelier & Pure Ingredients'}
+            </p>
+          </div>
+        </div>
+
+        {/* Direct Owner Inquiries */}
+        <div className="pt-2 border-t border-[#E8DFD8] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="text-[#8C766B]">
+            <span>Corporate gifting or bespoke tasting box? Direct atelier email: </span>
+            <strong className="font-mono text-[#2A1810] font-semibold">ovenglowdelights@gmail.com</strong>
+          </div>
+
+          <a
+            href="mailto:ovenglowdelights@gmail.com?subject=Custom%20Ovenglow%20Gifting%20Inquiry"
+            className="inline-flex items-center gap-1.5 font-bold text-[#2A1810] hover:text-[#C58940] transition-colors"
+          >
+            <span>Request Bespoke Tasting Box</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </div>
+
+    </div>
+  );
+};

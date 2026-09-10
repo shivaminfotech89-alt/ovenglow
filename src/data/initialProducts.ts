@@ -3,6 +3,7 @@ import { Product } from '../types';
 export const INITIAL_PRODUCTS: Product[] = [
   {
     id: 'prod-1',
+    sku: 'OG-SKU-001',
     name: 'Kashmiri Kesar & Roasted Pistachio White Chocolate',
     hindiSubname: 'कश्मीरी केसर एवं पिस्ता चॉकलेट',
     tagline: 'Infused with Grade-1 Pampore Saffron & Iranian Pistachios',
@@ -15,7 +16,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=900&q=80',
       'https://images.unsplash.com/photo-1526081347589-7fa3cb41b4b2?auto=format&fit=crop&w=900&q=80'
     ],
-    inStock: true,
+    isPublished: true,
     stockCount: 38,
     isVeg: true,
     rating: 4.9,
@@ -34,6 +35,7 @@ export const INITIAL_PRODUCTS: Product[] = [
   },
   {
     id: 'prod-2',
+    sku: 'OG-SKU-002',
     name: 'Royal Mysore 72% Dark Single Origin Cocoa Bar',
     hindiSubname: 'मैसूर डार्क चॉकलेट बार',
     tagline: 'Deep Malabar coast single-estate cocoa beans with sea salt crystals',
@@ -45,7 +47,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     secondaryImages: [
       'https://images.unsplash.com/photo-1582293041079-7814c2f12063?auto=format&fit=crop&w=900&q=80'
     ],
-    inStock: true,
+    isPublished: true,
     stockCount: 45,
     isVeg: true,
     rating: 4.8,
@@ -63,6 +65,7 @@ export const INITIAL_PRODUCTS: Product[] = [
   },
   {
     id: 'prod-3',
+    sku: 'OG-SKU-003',
     name: 'Ovenglow Belgian Molten Chocolate Lava Cake',
     hindiSubname: 'बेल्जियन चॉकलेट लावा केक (अंडा-रहित)',
     tagline: 'Warm oozing Belgian dark ganache center in an airy sponge cake',
@@ -74,7 +77,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     secondaryImages: [
       'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=900&q=80'
     ],
-    inStock: true,
+    isPublished: true,
     stockCount: 14,
     isVeg: true,
     rating: 5.0,
@@ -92,6 +95,7 @@ export const INITIAL_PRODUCTS: Product[] = [
   },
   {
     id: 'prod-4',
+    sku: 'OG-SKU-004',
     name: 'Golden Hazelnut Praline Truffle Jewels (Box of 12)',
     hindiSubname: 'गोल्डन हेज़लनट प्रालिन ट्रफ़ल्स',
     tagline: 'Crispy wafer sphere with roasted Piedmont hazelnut & gilded chocolate',
@@ -103,7 +107,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     secondaryImages: [
       'https://images.unsplash.com/photo-1526081347589-7fa3cb41b4b2?auto=format&fit=crop&w=900&q=80'
     ],
-    inStock: true,
+    isPublished: true,
     stockCount: 22,
     isVeg: true,
     rating: 4.9,
@@ -122,6 +126,7 @@ export const INITIAL_PRODUCTS: Product[] = [
   },
   {
     id: 'prod-5',
+    sku: 'OG-SKU-005',
     name: 'Ovenglow Signature Triple Chocolate Fudgy Brownie Cake',
     hindiSubname: 'ट्रिपल चॉकलेट ब्राउनी केक',
     tagline: 'Dense, glossy-crusted fudge brownie layered with dark chocolate ganache',
@@ -133,7 +138,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     secondaryImages: [
       'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=900&q=80'
     ],
-    inStock: true,
+    isPublished: true,
     stockCount: 19,
     isVeg: true,
     rating: 4.9,
@@ -151,6 +156,7 @@ export const INITIAL_PRODUCTS: Product[] = [
   },
   {
     id: 'prod-6',
+    sku: 'OG-SKU-006',
     name: 'Cardamom & Rose Petal Praline Box (16 Pcs)',
     hindiSubname: 'इलायची और गुलाब प्रालिन बॉक्स',
     tagline: 'Infused with organic damask rose water & freshly crushed green elaichi',
@@ -162,7 +168,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     secondaryImages: [
       'https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=900&q=80'
     ],
-    inStock: true,
+    isPublished: true,
     stockCount: 29,
     isVeg: true,
     rating: 4.7,
@@ -180,6 +186,7 @@ export const INITIAL_PRODUCTS: Product[] = [
   },
   {
     id: 'prod-7',
+    sku: 'OG-SKU-007',
     name: 'Artisanal Pain Au Chocolat & Almond Flaky Croissants (Box of 4)',
     hindiSubname: 'फ़्रेंच चॉकलेट और बादाम क्रोइसैन',
     tagline: '72-hour slow fermented laminated butter pastry stuffed with dark batons',
@@ -191,7 +198,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     secondaryImages: [
       'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=80'
     ],
-    inStock: true,
+    isPublished: true,
     stockCount: 8,
     isVeg: true,
     rating: 4.8,
@@ -209,6 +216,7 @@ export const INITIAL_PRODUCTS: Product[] = [
   },
   {
     id: 'prod-8',
+    sku: 'OG-SKU-008',
     name: 'The Grand Imperial Festive Ovenglow Hamper',
     hindiSubname: 'द ग्रैंड इंपीरियल फेस्टिव हैम्प़र',
     tagline: 'Luxury velvet box with Truffles, Saffron Chocolate, Brownie & Brass Diya',
@@ -220,7 +228,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     secondaryImages: [
       'https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=900&q=80'
     ],
-    inStock: true,
+    isPublished: true,
     stockCount: 16,
     isVeg: true,
     rating: 5.0,

@@ -24,12 +24,20 @@ export const Navbar: React.FC = () => {
     deliveryPincode, 
     setDeliveryPincode,
     getWhatsAppSupportLink,
-    ownerUser,
+    currentStaff,
     customerUser,
     setIsCustomerAuthOpen,
     searchQuery,
-    setSearchQuery
+    setSearchQuery,
+    coupons,
+    storeSettings
   } = useStore();
+
+  // The banner advertises a real, live code or nothing at all.
+  const featuredCoupon =
+    coupons.find(
+      (c) => c.isActive && (!c.expiresAt || new Date(c.expiresAt).getTime() > Date.now()),
+    ) ?? null;
 
   const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
   const [customPin, setCustomPin] = useState('');
@@ -64,9 +72,23 @@ export const Navbar: React.FC = () => {
       <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-[#EBE3DA] shadow-[0_2px_8px_rgba(36,21,16,0.03)] transition-all">
         {/* Sleek Minimal Top Announcement Bar */}
         <div className="bg-[#241510] py-1.5 px-4 text-center text-[11px] font-normal text-[#E8DFD8] flex items-center justify-center gap-2 tracking-wide">
-          <span>Complimentary express cold-chain delivery on orders over ₹499</span>
-          <span className="hidden sm:inline text-[#C58940]">•</span>
-          <span className="hidden sm:inline">Use code <strong className="text-white font-medium">GLOW10</strong> for 10% off</span>
+          <span>
+            Complimentary express cold-chain delivery on orders over ₹
+            {storeSettings.freeDeliveryThreshold}
+          </span>
+          {featuredCoupon && (
+            <>
+              <span className="hidden sm:inline text-[#C58940]">•</span>
+              <span className="hidden sm:inline">
+                Use code{' '}
+                <strong className="text-white font-medium">{featuredCoupon.code}</strong>{' '}
+                for{' '}
+                {featuredCoupon.discountType === 'percentage'
+                  ? `${featuredCoupon.discountValue}% off`
+                  : `₹${featuredCoupon.discountValue} off`}
+              </span>
+            </>
+          )}
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-18 flex items-center justify-between gap-2.5 sm:gap-4">
@@ -152,8 +174,9 @@ export const Navbar: React.FC = () => {
                 <span>Track Order</span>
               </button>
 
-              {/* Owner Portal: only rendered when owner is authenticated */}
-              {ownerUser && (
+              {/* Staff entry. Always reachable: the sign-in screen is the gate,
+                  and hiding this button only locked staff out of it. */}
+              {(
                 <button
                   id="nav-btn-admin"
                   onClick={() => setActiveTab('admin')}
@@ -164,7 +187,7 @@ export const Navbar: React.FC = () => {
                   }`}
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="font-semibold">Console</span>
+                  <span className="font-semibold">{currentStaff ? 'Console' : 'Staff'}</span>
                 </button>
               )}
             </nav>
@@ -364,7 +387,7 @@ export const Navbar: React.FC = () => {
           <span>Track</span>
         </button>
 
-        {ownerUser ? (
+        {currentStaff ? (
           <button
             onClick={() => {
               setActiveTab('admin');

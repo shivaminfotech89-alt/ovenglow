@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
+import { STAGES } from '../lib/orderStages';
 import { 
   X, 
   Phone, 
@@ -11,7 +12,6 @@ import {
   LogOut, 
   Package, 
   Lock,
-  Sparkles
 } from 'lucide-react';
 
 interface CustomerAuthModalProps {
@@ -238,7 +238,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                           <Package className="w-3.5 h-3.5 text-[#C58940]" />
                           <span className="font-mono font-bold text-[#241510]">{ord.orderNumber}</span>
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FAF7F2] text-[#5C4033]">
-                            {ord.status}
+                            {STAGES[ord.stage].label}
                           </span>
                         </div>
                         <span className="font-bold text-[#241510]">₹{ord.totalAmount}</span>

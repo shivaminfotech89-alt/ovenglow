@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
 import { Product } from '../types';
 import { 
   Sparkles, 
   Search, 
-  Filter, 
   Flame, 
   Gift, 
   Cake, 
@@ -21,7 +20,7 @@ interface ShopViewProps {
 
 export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
   const { 
-    products, 
+    shopProducts, 
     selectedCategory, 
     setSelectedCategory, 
     searchQuery, 
@@ -40,7 +39,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
   ];
 
   // Filtering
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = shopProducts.filter((p) => {
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
     const matchesVeg = !isVegOnly || p.isVeg;
     const matchesSearch = 

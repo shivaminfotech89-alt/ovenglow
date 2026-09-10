@@ -6,10 +6,7 @@ import {
   Star, 
   ShoppingBag, 
   ShieldCheck, 
-  Clock, 
   Package, 
-  Flame, 
-  Heart, 
   Gift, 
   Truck
 } from 'lucide-react';

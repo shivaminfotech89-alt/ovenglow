@@ -29,15 +29,16 @@ import { INITIAL_COUPONS } from '../data/initialCoupons';
 import { INITIAL_BANNERS } from '../data/initialBanners';
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
-  storeName: 'Ovenglow Artisanal Confections',
-  tagline: 'Handcrafted Pure Cocoa Butter Chocolates & Gourmet Pastries',
+  // Taken from the brand mark: OVENGLOW · DELIGHTS · CRAFTED TO CRAVE.
+  storeName: 'Ovenglow Delights',
+  tagline: 'Crafted to Crave',
   address: '',
   city: 'Ahmedabad',
   state: 'Gujarat',
   pincode: '',
   landmark: '',
-  phone: '',
-  whatsappNumber: '',
+  phone: '9824704877',
+  whatsappNumber: '9824704877',
   email: 'ovenglowdelights@gmail.com',
   operatingHours: '10:00 AM – 11:00 PM (Daily Fresh Baking)',
   fssaiLicense: '',
@@ -92,19 +93,20 @@ const DEFAULT_STAFF: StaffUser[] = [
 ];
 
 /**
- * v2: the order shape changed (status -> stage, payment record added), so the
- * key is bumped rather than migrated. v1 data is left in place and ignored.
+ * v3: the catalogue moved to the nine printed ranges, so stored products carry
+ * category slugs that no longer exist. Bumped rather than migrated; older data
+ * is left in place and ignored.
  */
 const STORAGE_KEYS = {
-  PRODUCTS: 'ovenglow_products_v2',
-  ORDERS: 'ovenglow_orders_v2',
-  CART: 'ovenglow_cart_v2',
-  STAFF: 'ovenglow_staff_v2',
-  SESSION: 'ovenglow_staff_session_v2',
-  CUSTOMER: 'ovenglow_customer_v2',
-  SETTINGS: 'ovenglow_settings_v2',
-  COUPONS: 'ovenglow_coupons_v2',
-  BANNERS: 'ovenglow_banners_v2',
+  PRODUCTS: 'ovenglow_products_v3',
+  ORDERS: 'ovenglow_orders_v3',
+  CART: 'ovenglow_cart_v3',
+  STAFF: 'ovenglow_staff_v3',
+  SESSION: 'ovenglow_staff_session_v3',
+  CUSTOMER: 'ovenglow_customer_v3',
+  SETTINGS: 'ovenglow_settings_v3',
+  COUPONS: 'ovenglow_coupons_v3',
+  BANNERS: 'ovenglow_banners_v3',
 } as const;
 
 export type Result = { success: boolean; message: string };
@@ -344,6 +346,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (updates.stockCount !== undefined && updates.stockCount < 0) {
         return { success: false, message: 'Stock cannot be negative.' };
       }
+      if (updates.isPublished) {
+        const target = products.find((p) => p.id === id);
+        const price = updates.price ?? target?.price ?? 0;
+        if (price <= 0) {
+          return { success: false, message: 'Set a price before publishing this product.' };
+        }
+      }
       setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
       notifySync('PRODUCTS');
       return { success: true, message: 'Saved.' };
@@ -536,9 +545,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const createOrder = useCallback(
     (customer: CustomerDetails, paymentMethod: PaymentMethod): Order => {
       const partners = [
-        { name: 'Cold-Chain Express Fleet', vehicleNumber: 'Insulated Thermal Van' },
-        { name: 'Atelier Direct Dispatch', vehicleNumber: 'Temperature Controlled EV' },
-        { name: 'Artisanal Fresh Courier', vehicleNumber: 'Insulated Express Courier' },
+        { name: 'Ovenglow Delivery', vehicleNumber: 'Own rider' },
+        { name: 'Ovenglow Delivery', vehicleNumber: 'Own rider' },
+        { name: 'Local Courier', vehicleNumber: 'Courier partner' },
       ];
       const partner = partners[Math.floor(Math.random() * partners.length)];
       const now = new Date().toISOString();

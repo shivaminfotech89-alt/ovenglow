@@ -2,18 +2,27 @@ import { OrderStage } from './lib/orderStages';
 import { StaffRole } from './lib/permissions';
 
 export type ProductCategory =
-  | 'artisanal-chocolates'
-  | 'truffles-bonbons'
-  | 'gourmet-cakes'
-  | 'bakery-pastries'
-  | 'festive-hampers';
+  | 'premium-chocolate'
+  | 'brownie-indulgence'
+  | 'cookie-cravings'
+  | 'celebration-cakes'
+  | 'tea-cakes'
+  | 'gourmet-cookies'
+  | 'cupcake-dreams'
+  | 'muffin-moments'
+  | 'cheesecake-heaven';
 
+/** The nine ranges from the Oven Glow Delights catalogue, in catalogue order. */
 export const PRODUCT_CATEGORIES: { id: ProductCategory; label: string }[] = [
-  { id: 'artisanal-chocolates', label: 'Artisanal Chocolates' },
-  { id: 'truffles-bonbons', label: 'Truffles & Bonbons' },
-  { id: 'gourmet-cakes', label: 'Gourmet Cakes' },
-  { id: 'bakery-pastries', label: 'Bakery & Pastries' },
-  { id: 'festive-hampers', label: 'Festive Hampers' },
+  { id: 'premium-chocolate', label: 'Premium Chocolate' },
+  { id: 'brownie-indulgence', label: 'Brownie Indulgence' },
+  { id: 'cookie-cravings', label: 'Cookie Cravings' },
+  { id: 'celebration-cakes', label: 'Celebration Cakes' },
+  { id: 'tea-cakes', label: 'Tea Cakes' },
+  { id: 'gourmet-cookies', label: 'Gourmet Cookies' },
+  { id: 'cupcake-dreams', label: 'Cupcake Dreams' },
+  { id: 'muffin-moments', label: 'Muffin Moments' },
+  { id: 'cheesecake-heaven', label: 'Cheesecake Heaven' },
 ];
 
 export interface Product {
@@ -50,7 +59,12 @@ export interface Product {
 
 /** True only when a customer can actually buy it right now. */
 export function isBuyable(product: Product): boolean {
-  return product.isPublished && product.stockCount > 0;
+  return product.isPublished && product.stockCount > 0 && product.price > 0;
+}
+
+/** Seeded from the catalogue but not yet priced by the owner. */
+export function needsPricing(product: Product): boolean {
+  return product.price <= 0;
 }
 
 export interface CartItem {

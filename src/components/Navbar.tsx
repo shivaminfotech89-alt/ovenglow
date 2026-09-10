@@ -73,7 +73,7 @@ export const Navbar: React.FC = () => {
         {/* Sleek Minimal Top Announcement Bar */}
         <div className="bg-[#241510] py-1.5 px-4 text-center text-[11px] font-normal text-[#E8DFD8] flex items-center justify-center gap-2 tracking-wide">
           <span>
-            Complimentary express cold-chain delivery on orders over ₹
+            Free delivery on orders over ₹
             {storeSettings.freeDeliveryThreshold}
           </span>
           {featuredCoupon && (
@@ -121,7 +121,7 @@ export const Navbar: React.FC = () => {
               <input
                 type="text"
                 id="topbar-search-input"
-                placeholder="Search chocolates, cakes, truffles..."
+                placeholder="Search cakes, cookies, brownies..."
                 value={searchQuery}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -158,7 +158,7 @@ export const Navbar: React.FC = () => {
                     : 'text-[#5C4033] hover:text-[#241510] hover:bg-[#FAF7F2]'
                 }`}
               >
-                Confections
+                Shop
               </button>
 
               <button
@@ -272,7 +272,7 @@ export const Navbar: React.FC = () => {
             <input
               type="text"
               id="mobile-topbar-search-input"
-              placeholder="Search chocolates, cakes, truffles..."
+              placeholder="Search cakes, cookies, brownies..."
               value={searchQuery}
               onChange={(e) => {
                 const val = e.target.value;

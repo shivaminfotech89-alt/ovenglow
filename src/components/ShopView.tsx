@@ -1,18 +1,36 @@
 import React from 'react';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
-import { Product } from '../types';
+import { PRODUCT_CATEGORIES, Product, ProductCategory } from '../types';
 import { 
   Sparkles, 
   Search, 
-  Flame, 
-  Gift, 
-  Cake, 
-  Layers, 
+  Gift,
+  Cake,
+  Layers,
+  Cookie,
+  Coffee,
+  Croissant,
+  CakeSlice,
+  IceCreamCone,
+  Square,
   ArrowRight,
   ShieldCheck,
   X
 } from 'lucide-react';
+
+/** One icon per printed range, in catalogue order. */
+const CATEGORY_ICONS: Record<ProductCategory, typeof Sparkles> = {
+  'premium-chocolate': Layers,
+  'brownie-indulgence': Square,
+  'cookie-cravings': Cookie,
+  'celebration-cakes': Cake,
+  'tea-cakes': Coffee,
+  'gourmet-cookies': Gift,
+  'cupcake-dreams': IceCreamCone,
+  'muffin-moments': Croissant,
+  'cheesecake-heaven': CakeSlice,
+};
 
 interface ShopViewProps {
   onOpenProductDetails: (product: Product) => void;
@@ -29,13 +47,13 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
     storeSettings
   } = useStore();
 
-  const categories = [
-    { id: 'all', label: 'All Confections', icon: Sparkles },
-    { id: 'artisanal-chocolates', label: 'Artisanal Chocolates', icon: Layers },
-    { id: 'truffles-bonbons', label: 'Truffles & Bonbons', icon: Gift },
-    { id: 'gourmet-cakes', label: 'Gourmet Cakes', icon: Cake },
-    { id: 'bakery-pastries', label: 'Bakery & Pastries', icon: Flame },
-    { id: 'festive-hampers', label: 'Festive Hampers', icon: Gift },
+  const categories: { id: string; label: string; icon: typeof Sparkles }[] = [
+    { id: 'all', label: 'Everything', icon: Sparkles },
+    ...PRODUCT_CATEGORIES.map((c) => ({
+      id: c.id as string,
+      label: c.label,
+      icon: CATEGORY_ICONS[c.id],
+    })),
   ];
 
   // Filtering
@@ -184,23 +202,23 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
           {/* 5. Subtle Top-Right Oven Temperature Indicator */}
           <div className="hidden sm:inline-flex items-center gap-2 absolute top-6 right-8 px-3.5 py-1.5 rounded-full bg-[#241510]/70 backdrop-blur-md border border-[#E5A93C]/30 text-[#E5A93C] text-[11px] font-medium shadow-sm z-10 select-none">
             <span className="w-2 h-2 rounded-full bg-[#FF7A18] animate-pulse shadow-[0_0_8px_#FF7A18]" />
-            <span>Deck Oven Hearth • 210°C Live Glow</span>
+            <span>Baked fresh daily</span>
           </div>
 
           {/* Left Hero Content */}
           <div className="relative z-10 max-w-2xl space-y-4">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#E5A93C] text-[11px] font-semibold tracking-wider uppercase">
               <Sparkles className="w-3.5 h-3.5 text-[#E5A93C]" />
-              <span>Pure Malabar Cocoa Butter • Small-Batch {storeSettings.city} Kitchen</span>
+              <span>Baked with Love • Crafted for Delight • {storeSettings.city}</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold text-white tracking-tight leading-[1.08]">
-              Artisanal Chocolates <br className="hidden sm:inline" />
-              <span className="italic font-normal text-[#E5A93C]">& Deck-Oven Delights</span>
+              Delights <br className="hidden sm:inline" />
+              <span className="italic font-normal text-[#E5A93C]">Crafted to Crave</span>
             </h1>
 
             <p className="text-[#D4C5B9] text-xs sm:text-sm md:text-base font-normal leading-relaxed max-w-xl">
-              Single-estate cocoa bars hand-tempered to perfection, Kashmiri saffron truffles, and warm deck-oven lava cakes. Shipped across 500+ Indian cities in insulated cold-chain thermal packaging.
+              Cakes, cookies, brownies, cupcakes, muffins and cheesecakes — baked fresh for every occasion, and delivered across {storeSettings.city}.
             </p>
 
             {/* Quick Action Buttons */}
@@ -211,13 +229,13 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
                 }}
                 className="px-6 py-3 bg-[#E5A93C] hover:bg-[#D99A2B] text-[#241510] font-bold rounded-full shadow-md text-xs sm:text-sm flex items-center gap-2 transition-all active:scale-95"
               >
-                <span>Explore Confections</span>
+                <span>Explore the Menu</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
 
               <div className="flex items-center gap-2 px-4 py-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 text-xs font-medium text-[#E8DFD8]">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Complimentary Express Cold-Chain over ₹499</span>
+                <span>Free delivery over ₹{storeSettings.freeDeliveryThreshold}</span>
               </div>
             </div>
           </div>
@@ -276,7 +294,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
       <div id="product-catalog-grid">
         <div className="flex items-center justify-between mb-3 sm:mb-4 px-0.5">
           <span className="text-xs font-medium text-[#8C766B]">
-            Showing {filteredProducts.length} handcrafted confections
+            Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'}
           </span>
 
           {isVegOnly && (
@@ -289,10 +307,22 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
 
         {filteredProducts.length === 0 ? (
           <div className="p-10 text-center rounded-2xl bg-white border border-[#E8DFD8] space-y-3">
-            <p className="text-lg text-[#2A1810] font-serif font-bold">No confections found</p>
-            <p className="text-xs text-[#8C766B]">
-              Try searching for "saffron", "brownie", or resetting your category filter.
-            </p>
+            {shopProducts.length === 0 ? (
+              <>
+                <p className="text-lg text-[#2A1810] font-serif font-bold">The menu is being set up</p>
+                <p className="text-xs text-[#8C766B] max-w-md mx-auto">
+                  Our {PRODUCT_CATEGORIES.length} ranges are loaded but not yet priced and published.
+                  Message us on WhatsApp and we will take your order directly in the meantime.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg text-[#2A1810] font-serif font-bold">Nothing matches that search</p>
+                <p className="text-xs text-[#8C766B]">
+                  Try a different category, or clear your filters.
+                </p>
+              </>
+            )}
             <button
               onClick={() => {
                 setSelectedCategory('all');
@@ -321,41 +351,54 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
         <div className="max-w-3xl space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E8DFD8] text-[11px] font-semibold text-[#5C4033]">
             <Sparkles className="w-3.5 h-3.5 text-[#C58940]" />
-            <span>From Our Master Chocolatier & Founding Team</span>
+            <span>From the Ovenglow Kitchen</span>
           </div>
 
           <h3 className="text-2xl sm:text-3xl font-serif font-bold text-[#2A1810] tracking-tight">
-            The Ovenglow Standard: Pure Cacao, Deck Ovens & Zero Compound Fats
+            Baked with love, crafted for delight
           </h3>
 
           <p className="text-xs sm:text-sm text-[#6B574E] leading-relaxed">
-            Every batch at Ovenglow begins with single-estate cacao from the Malabar coast, pure cocoa butter, and authentic Kashmiri saffron. We never substitute cocoa butter with hydrogenated vegetable fats or palm oil. Our molten cakes and soft-center cookies are baked daily in stone-deck ovens and dispatched in insulated thermal foil with ice cooling gels.
+            Nine ranges — premium chocolate, brownies, cookies, celebration cakes, tea cakes, gourmet
+            cookies, cupcakes, muffins and cheesecakes — baked in small batches to order. Tell us the
+            occasion on WhatsApp and we will bake to suit it.
           </p>
         </div>
 
-        {/* 4 Craft Pillars */}
+        {/* Promises, in the brand's own words from the printed catalogue. The
+            FSSAI tile appears only once a real licence number is on file --
+            claiming certification without one is a claim we cannot back. */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
           <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
-            <span className="font-serif font-bold text-sm text-[#2A1810] block">Pure Cocoa Butter</span>
-            <p className="text-[11px] text-[#8C766B]">Strictly zero palm oils or compound substitutes.</p>
+            <span className="font-serif font-bold text-sm text-[#2A1810] block">Fresh Ingredients</span>
+            <p className="text-[11px] text-[#8C766B]">Bought in and baked with, not held on a shelf.</p>
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
-            <span className="font-serif font-bold text-sm text-[#2A1810] block">Deck Oven Fresh</span>
-            <p className="text-[11px] text-[#8C766B]">Baked daily in small batches in our stone-deck hearth ovens.</p>
+            <span className="font-serif font-bold text-sm text-[#2A1810] block">Homemade Goodness</span>
+            <p className="text-[11px] text-[#8C766B]">Small batches, made to order in our own kitchen.</p>
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
-            <span className="font-serif font-bold text-sm text-[#2A1810] block">Cold-Chain Thermal Pack</span>
-            <p className="text-[11px] text-[#8C766B]">Insulated foil and food-grade ice gels across India.</p>
+            <span className="font-serif font-bold text-sm text-[#2A1810] block">For Every Occasion</span>
+            <p className="text-[11px] text-[#8C766B]">Celebrations, gifting, or a treat on an ordinary day.</p>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
-            <span className="font-serif font-bold text-sm text-[#2A1810] block">FSSAI Certified</span>
-            <p className="text-[11px] text-[#8C766B]">
-              {storeSettings.fssaiLicense ? `Lic. ${storeSettings.fssaiLicense}` : 'Certified Gourmet Atelier & Pure Ingredients'}
-            </p>
-          </div>
+          {storeSettings.fssaiLicense ? (
+            <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
+              <span className="font-serif font-bold text-sm text-[#2A1810] block">FSSAI Licensed</span>
+              <p className="text-[11px] text-[#8C766B]">Lic. {storeSettings.fssaiLicense}</p>
+            </div>
+          ) : (
+            <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
+              <span className="font-serif font-bold text-sm text-[#2A1810] block">Order on WhatsApp</span>
+              <p className="text-[11px] text-[#8C766B]">
+                {storeSettings.whatsappNumber
+                  ? `Message us on ${storeSettings.whatsappNumber}`
+                  : 'Message us to place an order'}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Direct Owner Inquiries */}

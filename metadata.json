@@ -1,6 +1,6 @@
 {
-  "name": "Ovenglow - Artisanal Chocolates & Bakery",
-  "description": "Online gourmet chocolate & bakery store in India with WhatsApp concierge, live order tracking, checkout, and kitchen operations portal.",
+  "name": "Ovenglow Delights — Crafted to Crave",
+  "description": "Cakes, cookies, brownies, cupcakes, muffins and cheesecakes, baked fresh for every occasion. Order on WhatsApp with live order tracking.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }

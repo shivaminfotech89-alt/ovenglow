@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Copy, Download, Eye, EyeOff, Plus, Search, Trash2 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { PRODUCT_CATEGORIES, Product, ProductCategory } from '../../types';
+import { PRODUCT_CATEGORIES, Product, ProductCategory, needsPricing } from '../../types';
 import {
   Drawer,
   EmptyState,
@@ -24,7 +24,7 @@ const blankProduct = (): Omit<Product, 'id'> => ({
   description: '',
   price: 0,
   originalPrice: 0,
-  category: 'artisanal-chocolates',
+  category: 'premium-chocolate',
   image: '',
   secondaryImages: [],
   isPublished: false,
@@ -67,6 +67,7 @@ export const ProductsScreen: React.FC = () => {
       visible: products.filter((p) => p.isPublished && p.stockCount > 0).length,
       hidden: products.filter((p) => !p.isPublished).length,
       outOfStock: products.filter((p) => p.stockCount === 0).length,
+      unpriced: products.filter(needsPricing).length,
       units: products.reduce((sum, p) => sum + p.stockCount, 0),
     }),
     [products],
@@ -150,7 +151,7 @@ export const ProductsScreen: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label="Total products" value={stats.total} />
         <StatCard label="Buyable now" value={stats.visible} tone="good" />
         <StatCard label="Hidden" value={stats.hidden} />
@@ -158,6 +159,12 @@ export const ProductsScreen: React.FC = () => {
           label="Out of stock"
           value={stats.outOfStock}
           tone={stats.outOfStock > 0 ? 'warn' : 'default'}
+        />
+        <StatCard
+          label="Needs a price"
+          value={stats.unpriced}
+          tone={stats.unpriced > 0 ? 'warn' : 'default'}
+          hint={stats.unpriced > 0 ? 'Cannot be published yet' : undefined}
         />
         <StatCard label="Units held" value={stats.units} />
       </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { OvenglowLogo } from './OvenglowLogo';
 import { useStore } from '../context/StoreContext';
+import { PRODUCT_CATEGORIES } from '../types';
 import { 
   ShieldCheck, 
   MessageSquare, 
@@ -13,7 +14,8 @@ import {
 } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const { setActiveTab, getWhatsAppSupportLink, setIsCustomerAuthOpen, storeSettings } = useStore();
+  const { setActiveTab, setSelectedCategory, getWhatsAppSupportLink, setIsCustomerAuthOpen, storeSettings } =
+    useStore();
 
   return (
     <footer className="w-full bg-[#241510] border-t border-[#3D2317] text-[#D4C5B9] text-xs mt-16">
@@ -25,8 +27,8 @@ export const Footer: React.FC = () => {
               <Truck className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-white font-medium block text-xs">Insulated Cold Chain</span>
-              <span className="text-[11px] text-[#A69286]">Temperature-controlled thermal packaging</span>
+              <span className="text-white font-medium block text-xs">Fresh Ingredients</span>
+              <span className="text-[11px] text-[#A69286]">Baked to order, never off the shelf</span>
             </div>
           </div>
 
@@ -35,8 +37,8 @@ export const Footer: React.FC = () => {
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-white font-medium block text-xs">Pure Cocoa Butter</span>
-              <span className="text-[11px] text-[#A69286]">Zero compound fats or palm oils</span>
+              <span className="text-white font-medium block text-xs">Homemade Goodness</span>
+              <span className="text-[11px] text-[#A69286]">Small batches from our own kitchen</span>
             </div>
           </div>
 
@@ -47,8 +49,8 @@ export const Footer: React.FC = () => {
               </div>
             </div>
             <div>
-              <span className="text-white font-medium block text-xs">100% Eggless Bakery</span>
-              <span className="text-[11px] text-[#A69286]">Carefully prepared vegetarian confections</span>
+              <span className="text-white font-medium block text-xs">For Every Occasion</span>
+              <span className="text-[11px] text-[#A69286]">Celebrations, gifting and everyday treats</span>
             </div>
           </div>
 
@@ -58,7 +60,7 @@ export const Footer: React.FC = () => {
             </div>
             <div>
               <span className="text-white font-medium block text-xs">WhatsApp Concierge</span>
-              <span className="text-[11px] text-[#A69286]">Bespoke hampers & real-time updates</span>
+              <span className="text-[11px] text-[#A69286]">Order and track on WhatsApp</span>
             </div>
           </div>
         </div>
@@ -90,13 +92,22 @@ export const Footer: React.FC = () => {
 
         {/* Quick Links */}
         <div className="space-y-3">
-          <span className="text-[#C58940] font-medium uppercase tracking-wider text-xs block">Artisanal Menu</span>
+          <span className="text-[#C58940] font-medium uppercase tracking-wider text-xs block">Our Menu</span>
           <ul className="space-y-2 text-[#A69286] text-xs">
-            <li><button onClick={() => setActiveTab('shop')} className="hover:text-white transition-colors">Single Origin Bars</button></li>
-            <li><button onClick={() => setActiveTab('shop')} className="hover:text-white transition-colors">Kashmiri Saffron Truffles</button></li>
-            <li><button onClick={() => setActiveTab('shop')} className="hover:text-white transition-colors">Belgian Lava Cakes</button></li>
-            <li><button onClick={() => setActiveTab('shop')} className="hover:text-white transition-colors">Festive Gift Hampers</button></li>
-            <li><button onClick={() => setActiveTab('shop')} className="hover:text-white transition-colors">100% Eggless Specialties</button></li>
+            {PRODUCT_CATEGORIES.map((c) => (
+              <li key={c.id}>
+                <button
+                  onClick={() => {
+                    setSelectedCategory(c.id);
+                    setActiveTab('shop');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="hover:text-white transition-colors"
+                >
+                  {c.label}
+                </button>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -107,7 +118,7 @@ export const Footer: React.FC = () => {
             <li><button onClick={() => setActiveTab('track')} className="hover:text-white transition-colors">Track Live Order</button></li>
             <li><button onClick={() => setIsCustomerAuthOpen(true)} className="hover:text-white transition-colors">Customer Account & Mobile Login</button></li>
             <li><a href={getWhatsAppSupportLink('Bulk Corporate Gifting')} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Corporate Gifting</a></li>
-            <li><a href={getWhatsAppSupportLink('Custom Wedding Cakes')} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Event Confections</a></li>
+            <li><a href={getWhatsAppSupportLink('Custom Wedding Cakes')} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Event & Wedding Cakes</a></li>
             {storeSettings.fssaiLicense ? (
               <li><span className="text-[#8C766B]">FSSAI Lic. {storeSettings.fssaiLicense}</span></li>
             ) : (
@@ -158,7 +169,7 @@ export const Footer: React.FC = () => {
       {/* Bottom Legal bar */}
       <div className="border-t border-[#3D2317] bg-[#1A0C08] py-4 px-4 text-center text-[#8C766B] text-xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>© {new Date().getFullYear()} Ovenglow Delights Pvt. Ltd.</span>
+          <span>© {new Date().getFullYear()} {storeSettings.storeName}</span>
           <span className="flex items-center gap-1.5">
             Crafted for small-batch confectionery enthusiasts
           </span>

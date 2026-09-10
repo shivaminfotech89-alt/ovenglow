@@ -90,9 +90,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
               <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#241510]">
                 <Truck className="w-3.5 h-3.5 text-[#C58940]" />
                 {isFreeDelivery ? (
-                  <span className="text-emerald-800 font-medium">Free Express Cold-Chain Delivery unlocked!</span>
+                  <span className="text-emerald-800 font-medium">Free delivery unlocked!</span>
                 ) : (
-                  <span>Add ₹{amountNeededForFreeDelivery} more for Free Cold-Chain Delivery</span>
+                  <span>Add ₹{amountNeededForFreeDelivery} more for free delivery</span>
                 )}
               </span>
               <span className="font-mono text-[#8C766B] text-[10px]">₹{freeDeliveryThreshold}</span>
@@ -120,7 +120,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                   onClick={() => setIsCartOpen(false)}
                   className="mt-2 px-5 py-2 rounded-full text-xs font-medium bg-[#241510] text-white hover:bg-[#3D2317] transition-colors shadow-xs"
                 >
-                  Explore Confections
+                  Explore the Menu
                 </button>
               </div>
             ) : (
@@ -256,7 +256,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                 )}
 
                 <div className="flex justify-between">
-                  <span>Cold-Chain Delivery</span>
+                  <span>Fresh Delivery</span>
                   <span>
                     {deliveryFee === 0 ? <span className="text-emerald-800 font-medium">FREE</span> : `₹${deliveryFee}`}
                   </span>

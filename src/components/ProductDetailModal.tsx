@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
 import { useStore } from '../context/StoreContext';
+import { ProductImage } from './ProductImage';
 import { 
   X, 
   Star, 
   ShoppingBag, 
   ShieldCheck, 
-  Clock, 
   Package, 
-  Flame, 
-  Heart, 
   Gift, 
   Truck
 } from 'lucide-react';
@@ -61,10 +59,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
         {/* Left Column: Image Gallery */}
         <div className="md:w-1/2 p-4 sm:p-6 flex flex-col justify-between bg-white border-b md:border-b-0 md:border-r border-[#E8DFD8]">
           <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-[#FAF7F2] border border-[#E8DFD8]">
-            <img
+            <ProductImage
               src={selectedImage || product.image}
               alt={product.name}
-              referrerPolicy="no-referrer"
+              lazy={false}
               className="w-full h-full object-cover"
             />
             {product.isVeg && (
@@ -90,7 +88,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                       : 'border-[#E8DFD8] opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt="Thumbnail" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                  <ProductImage src={img} alt={`${product.name} thumbnail`} className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
@@ -168,7 +166,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
               <Truck className="w-4 h-4 text-[#C58940] shrink-0" />
               <div>
                 <span className="text-[#241510] font-medium block">Delivering to {deliveryPincode}</span>
-                <span className="text-[11px] text-[#8C766B]">Insulated cold-chain delivery.</span>
+                <span className="text-[11px] text-[#8C766B]">Delivered fresh across the city.</span>
               </div>
             </div>
 

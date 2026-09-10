@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
 import { useStore } from '../context/StoreContext';
+import { ProductImage } from './ProductImage';
 import { 
   Star, 
   Check, 
@@ -35,11 +36,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
     >
       {/* Product Image Stage */}
       <div className="relative aspect-square w-full overflow-hidden bg-[#FAF7F2]">
-        <img
+        <ProductImage
           src={product.image}
           alt={product.name}
-          referrerPolicy="no-referrer"
-          loading="lazy"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
         />
 

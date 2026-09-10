@@ -24,10 +24,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
     setIsCartOpen, 
     removeFromCart, 
     updateCartQuantity, 
-    clearCart,
     activeCoupon,
     applyCoupon,
-    removeCoupon
+    removeCoupon,
+    totals,
+    storeSettings
   } = useStore();
 
   const [couponInput, setCouponInput] = useState('');
@@ -35,24 +36,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
 
   if (!isCartOpen) return null;
 
-  const itemTotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  
-  // Calculate discount
-  let discount = 0;
-  if (activeCoupon === 'FESTIVE15') {
-    discount = Math.round(itemTotal * 0.15);
-  } else if (activeCoupon === 'OVENGLOW100') {
-    discount = Math.min(itemTotal, 100);
-  } else if (activeCoupon === 'SWEET20') {
-    discount = Math.round(itemTotal * 0.20);
-  }
-
-  const freeDeliveryThreshold = 499;
-  const isFreeDelivery = itemTotal - discount >= freeDeliveryThreshold;
-  const amountNeededForFreeDelivery = Math.max(0, freeDeliveryThreshold - (itemTotal - discount));
-  const deliveryFee = isFreeDelivery ? 0 : 60;
-  const tax = Math.round((itemTotal - discount) * 0.05); // 5% GST
-  const finalTotal = Math.max(0, itemTotal - discount + deliveryFee + tax);
+  // Every total comes from the one pricing function, so the drawer, the checkout
+  // screen and the stored order can never disagree.
+  const { itemTotal, discount, deliveryFee, tax, isFreeDelivery, freeDeliveryShortfall } = totals;
+  const finalTotal = totals.total;
+  const freeDeliveryThreshold = storeSettings.freeDeliveryThreshold;
+  const amountNeededForFreeDelivery = freeDeliveryShortfall;
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,9 +90,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
               <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#241510]">
                 <Truck className="w-3.5 h-3.5 text-[#C58940]" />
                 {isFreeDelivery ? (
-                  <span className="text-emerald-800 font-medium">Free Express Cold-Chain Delivery unlocked!</span>
+                  <span className="text-emerald-800 font-medium">Free delivery unlocked!</span>
                 ) : (
-                  <span>Add ₹{amountNeededForFreeDelivery} more for Free Cold-Chain Delivery</span>
+                  <span>Add ₹{amountNeededForFreeDelivery} more for free delivery</span>
                 )}
               </span>
               <span className="font-mono text-[#8C766B] text-[10px]">₹{freeDeliveryThreshold}</span>
@@ -131,7 +120,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                   onClick={() => setIsCartOpen(false)}
                   className="mt-2 px-5 py-2 rounded-full text-xs font-medium bg-[#241510] text-white hover:bg-[#3D2317] transition-colors shadow-xs"
                 >
-                  Explore Confections
+                  Explore the Menu
                 </button>
               </div>
             ) : (
@@ -216,7 +205,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                   <div className="flex items-center justify-between p-2 rounded-lg bg-[#FAF7F2] border border-[#E8DFD8] text-xs">
                     <span className="flex items-center gap-1.5 text-[#241510] font-medium">
                       <Sparkles className="w-3.5 h-3.5 text-[#C58940]" />
-                      Coupon <code className="font-mono font-bold text-[#C58940]">{activeCoupon}</code> applied
+                      Coupon <code className="font-mono font-bold text-[#C58940]">{activeCoupon.code}</code> applied
                     </span>
                     <button 
                       onClick={removeCoupon}
@@ -267,14 +256,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                 )}
 
                 <div className="flex justify-between">
-                  <span>Cold-Chain Delivery</span>
+                  <span>Fresh Delivery</span>
                   <span>
                     {deliveryFee === 0 ? <span className="text-emerald-800 font-medium">FREE</span> : `₹${deliveryFee}`}
                   </span>
                 </div>
 
                 <div className="flex justify-between">
-                  <span>Bakery GST (5% included)</span>
+                  <span>Bakery GST ({storeSettings.gstPercent}% included)</span>
                   <span className="text-[#241510]">₹{tax}</span>
                 </div>
 

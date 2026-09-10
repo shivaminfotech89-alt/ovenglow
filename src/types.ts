@@ -1,15 +1,45 @@
+import { OrderStage } from './lib/orderStages';
+import { StaffRole } from './lib/permissions';
+
+export type ProductCategory =
+  | 'premium-chocolate'
+  | 'brownie-indulgence'
+  | 'cookie-cravings'
+  | 'celebration-cakes'
+  | 'tea-cakes'
+  | 'gourmet-cookies'
+  | 'cupcake-dreams'
+  | 'muffin-moments'
+  | 'cheesecake-heaven';
+
+/** The nine ranges from the Oven Glow Delights catalogue, in catalogue order. */
+export const PRODUCT_CATEGORIES: { id: ProductCategory; label: string }[] = [
+  { id: 'premium-chocolate', label: 'Premium Chocolate' },
+  { id: 'brownie-indulgence', label: 'Brownie Indulgence' },
+  { id: 'cookie-cravings', label: 'Cookie Cravings' },
+  { id: 'celebration-cakes', label: 'Celebration Cakes' },
+  { id: 'tea-cakes', label: 'Tea Cakes' },
+  { id: 'gourmet-cookies', label: 'Gourmet Cookies' },
+  { id: 'cupcake-dreams', label: 'Cupcake Dreams' },
+  { id: 'muffin-moments', label: 'Muffin Moments' },
+  { id: 'cheesecake-heaven', label: 'Cheesecake Heaven' },
+];
+
 export interface Product {
   id: string;
+  /** The code on the supplier invoice. Unique; the product form refuses a duplicate. */
+  sku: string;
   name: string;
   hindiSubname?: string;
   tagline: string;
   description: string;
   price: number;
   originalPrice: number;
-  category: 'artisanal-chocolates' | 'truffles-bonbons' | 'gourmet-cakes' | 'bakery-pastries' | 'festive-hampers';
+  category: ProductCategory;
   image: string;
   secondaryImages: string[];
-  inStock: boolean;
+  /** Whether the product appears in the shop at all, independent of stock. */
+  isPublished: boolean;
   stockCount: number;
   isVeg: boolean; // 100% Eggless / Pure Vegetarian badge
   rating: number;
@@ -27,20 +57,21 @@ export interface Product {
   flavorNotes: string[];
 }
 
+/** True only when a customer can actually buy it right now. */
+export function isBuyable(product: Product): boolean {
+  return product.isPublished && product.stockCount > 0 && product.price > 0;
+}
+
+/** Seeded from the catalogue but not yet priced by the owner. */
+export function needsPricing(product: Product): boolean {
+  return product.price <= 0;
+}
+
 export interface CartItem {
   product: Product;
   quantity: number;
   customMessage?: string;
 }
-
-export type OrderStatus = 
-  | 'Placed' 
-  | 'Confirmed' 
-  | 'Baking' 
-  | 'Packed' 
-  | 'OutForDelivery' 
-  | 'Delivered' 
-  | 'Cancelled';
 
 export type PaymentMethod = 'UPI' | 'Card' | 'Netbanking' | 'COD';
 
@@ -60,8 +91,29 @@ export interface DeliveryPartner {
   name: string;
   phone: string;
   vehicleNumber: string;
-  currentLat?: number;
-  currentLng?: number;
+}
+
+/**
+ * What the customer submitted and what an admin did about it.
+ * `verifiedBy` is only ever set by an admin moving the order to `paid`.
+ */
+export interface PaymentRecord {
+  method: PaymentMethod;
+  /** The UPI transaction reference the customer typed in. */
+  upiReference?: string;
+  submittedAt?: string;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  /** Set when an admin rejects a reference, so the customer sees why. */
+  rejectionNote?: string;
+}
+
+export interface StageHistoryEntry {
+  stage: OrderStage;
+  at: string;
+  /** Email of the staff member, or 'customer' / 'system'. */
+  by: string;
+  note: string;
 }
 
 export interface Order {
@@ -71,37 +123,72 @@ export interface Order {
   items: CartItem[];
   itemTotal: number;
   discount: number;
+  couponCode: string | null;
   deliveryFee: number;
   tax: number;
   totalAmount: number;
   paymentMethod: PaymentMethod;
-  paymentStatus: 'Paid' | 'Pending' | 'COD';
-  status: OrderStatus;
+  payment: PaymentRecord;
+  stage: OrderStage;
   createdAt: string;
   updatedAt: string;
   deliveryPartner: DeliveryPartner;
   estimatedDeliveryTime: string;
   deliveryOtp: string;
-  statusHistory: {
-    status: OrderStatus;
-    timestamp: string;
-    note: string;
-  }[];
+  stageHistory: StageHistoryEntry[];
 }
 
-export interface SalesReport {
-  totalRevenue: number;
-  totalOrders: number;
-  averageOrderValue: number;
-  itemsSold: number;
-  categoryRevenue: Record<string, number>;
-  paymentMethodBreakdown: Record<string, number>;
-  statusCounts: Record<OrderStatus, number>;
-  dailySales: {
-    date: string;
-    revenue: number;
-    orders: number;
-  }[];
+export interface Coupon {
+  id: string;
+  code: string;
+  name: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  /** Cart subtotal below which the code is refused. 0 means no minimum. */
+  minPurchase: number;
+  /** ISO date, or null for a code that never expires. */
+  expiresAt: string | null;
+  isActive: boolean;
+  createdAt: string;
+  timesUsed: number;
+}
+
+export type BannerSlot = 'hero' | 'category' | 'campaign';
+
+export interface Banner {
+  id: string;
+  slot: BannerSlot;
+  title: string;
+  subtitle: string;
+  buttonText: string;
+  image: string;
+  /**
+   * The category this tile opens. Null means it opens an empty shop, which the
+   * admin screen flags as a warning.
+   */
+  linkedCategory: ProductCategory | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface StaffUser {
+  id: string;
+  email: string;
+  name: string;
+  role: StaffRole;
+  isActive: boolean;
+  addedAt: string;
+  lastLoginAt?: string;
+}
+
+export interface CustomerUser {
+  phone: string;
+  name: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  pincode?: string;
+  loggedInAt: string;
 }
 
 export interface StoreSettings {
@@ -117,32 +204,42 @@ export interface StoreSettings {
   email: string;
   operatingHours: string;
   fssaiLicense: string;
+  gstin: string;
+
+  // Payment
   upiId: string;
+  upiAccountName: string;
+  upiQrImage: string;
+  paymentInstructions: string;
+
+  // Charges — read by the single pricing function, editable by a Super Admin.
+  gstPercent: number;
+  deliveryFee: number;
+  freeDeliveryThreshold: number;
+
+  // Delivery coverage
   deliveryRadiusKm: number;
   deliveryAreas: { name: string; pin: string }[];
+
+  // Social
+  instagramUrl: string;
+  facebookUrl: string;
+  youtubeUrl: string;
 }
 
-export interface CustomerUser {
-  phone: string;
-  name: string;
-  email?: string;
-  address?: string;
-  city?: string;
-  pincode?: string;
-  isVerified: boolean;
-  loggedInAt: string;
+export interface SalesReport {
+  totalRevenue: number;
+  totalOrders: number;
+  averageOrderValue: number;
+  itemsSold: number;
+  categoryRevenue: Record<string, number>;
+  paymentMethodBreakdown: Record<string, number>;
+  stageCounts: Record<OrderStage, number>;
+  /** Real revenue bucketed by day from order timestamps, oldest first. */
+  dailySales: {
+    date: string;
+    label: string;
+    revenue: number;
+    orders: number;
+  }[];
 }
-
-export interface OwnerUser {
-  id?: string;
-  email: string;
-  name: string;
-  role: string;
-  avatar?: string;
-  addedAt?: string;
-}
-
-export const AUTHORIZED_OWNER_EMAILS = [
-  'ovenglowdelights@gmail.com',
-  'shivaminfotech89@gmail.com'
-];

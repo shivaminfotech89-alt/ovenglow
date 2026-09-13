@@ -1,4 +1,5 @@
 import React from 'react';
+import { useStore } from '../context/StoreContext';
 
 interface OvenglowLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -14,19 +15,20 @@ export const OvenglowLogo: React.FC<OvenglowLogoProps> = ({
   onClick
 }) => {
   const sizeMap = {
-    sm: { dimension: 38, textSize: 'text-base', subSize: 'text-[9px]' },
+    sm: { dimension: 38, textSize: 'text-sm sm:text-base', subSize: 'text-[9px]' },
     md: { dimension: 50, textSize: 'text-xl', subSize: 'text-[11px]' },
     lg: { dimension: 76, textSize: 'text-2xl', subSize: 'text-xs' },
     xl: { dimension: 110, textSize: 'text-4xl', subSize: 'text-sm' },
   };
 
   const current = sizeMap[size];
+  const { storeSettings } = useStore();
 
   return (
     <div 
       id="ovenglow-brand-logo"
       onClick={onClick}
-      className={`flex items-center gap-3 select-none cursor-pointer group ${className}`}
+      className={`flex min-w-0 items-center gap-3 select-none cursor-pointer group ${className}`}
     >
       <div 
         className="relative flex items-center justify-center shrink-0 rounded-full p-1 bg-gradient-to-br from-[#FF9933] via-[#e68524] to-[#4A2C2A] border-2 border-[#4A2C2A] shadow-md group-hover:scale-105 transition-all duration-300"
@@ -179,17 +181,17 @@ export const OvenglowLogo: React.FC<OvenglowLogoProps> = ({
       </div>
 
       {showSubtitle && (
-        <div className="flex flex-col">
-          <span 
-            className={`font-black tracking-tighter text-[#4A2C2A] group-hover:text-[#FF9933] transition-colors ${current.textSize}`}
+        <div className="flex min-w-0 flex-col">
+          <span
+            className={`whitespace-nowrap font-black uppercase tracking-tighter text-[#4A2C2A] group-hover:text-[#FF9933] transition-colors ${current.textSize}`}
           >
-            OVENGLOW
+            {storeSettings.storeName}
           </span>
-          <span 
-            className={`text-[#A68A78] uppercase tracking-[0.2em] font-black flex items-center gap-1.5 ${current.subSize}`}
+          <span
+            className={`hidden min-w-0 items-center gap-1.5 font-black uppercase tracking-[0.2em] text-[#A68A78] sm:flex ${current.subSize}`}
           >
-            <span>Delights Crafted to Crave</span>
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#25D366]"></span>
+            <span className="truncate">{storeSettings.tagline}</span>
+            <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#25D366]" />
           </span>
         </div>
       )}

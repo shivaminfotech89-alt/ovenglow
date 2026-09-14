@@ -94,7 +94,7 @@ export const Navbar: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-18 flex items-center justify-between gap-2.5 sm:gap-4">
           
           {/* Left: Brand Logo & Pincode */}
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <OvenglowLogo 
               size="sm" 
               onClick={() => {
@@ -195,8 +195,8 @@ export const Navbar: React.FC = () => {
             {/* Pure Veg Switch */}
             <button 
               onClick={() => setIsVegOnly(!isVegOnly)}
-              title="Filter 100% Eggless / Vegetarian only"
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all border ${
+              title="Filter vegetarian only"
+              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all border ${
                 isVegOnly 
                   ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-medium' 
                   : 'bg-white border-[#E8DFD8] text-[#8C766B] hover:border-[#241510]'
@@ -212,7 +212,7 @@ export const Navbar: React.FC = () => {
             <button
               id="nav-btn-customer-account"
               onClick={() => setIsCustomerAuthOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FAF7F2] hover:bg-[#F2ECE4] border border-[#E8DFD8] text-xs transition-all text-[#241510]"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FAF7F2] hover:bg-[#F2ECE4] border border-[#E8DFD8] text-xs transition-all text-[#241510]"
               title={customerUser ? 'Customer Account & Orders' : 'Sign in with Mobile Number'}
             >
               {customerUser ? (

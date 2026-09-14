@@ -43,6 +43,9 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   operatingHours: '10:00 AM – 11:00 PM (Daily Fresh Baking)',
   fssaiLicense: '',
   gstin: '',
+  // Served from public/logo.png when that file exists; the drawn mark is used
+  // until then, and any other URL can be set from Settings.
+  logoUrl: '/logo.png',
 
   upiId: '',
   upiAccountName: '',

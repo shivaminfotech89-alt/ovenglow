@@ -90,6 +90,31 @@ export const SettingsScreen: React.FC = () => {
           <Field label="GSTIN">
             <input value={form.gstin} onChange={(e) => set('gstin', e.target.value)} className={`${inputClass} font-mono`} />
           </Field>
+          <Field
+            label="Logo image"
+            hint="Put the file at public/logo.png, or paste any image URL. Leave blank to use the drawn mark."
+            className="sm:col-span-2"
+          >
+            <div className="flex items-center gap-3">
+              {form.logoUrl ? (
+                <img
+                  src={form.logoUrl}
+                  alt="Logo preview"
+                  className="h-12 w-12 shrink-0 rounded-full border border-[#E8DFD8] object-cover"
+                />
+              ) : (
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-dashed border-[#E8DFD8] text-[9px] text-[#A69286]">
+                  none
+                </span>
+              )}
+              <input
+                value={form.logoUrl}
+                onChange={(e) => set('logoUrl', e.target.value)}
+                placeholder="/logo.png"
+                className={inputClass}
+              />
+            </div>
+          </Field>
         </div>
       </section>
 

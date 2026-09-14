@@ -205,6 +205,11 @@ export interface StoreSettings {
   operatingHours: string;
   fssaiLicense: string;
   gstin: string;
+  /**
+   * The shop's real logo. Drop a file at public/logo.png (or set any URL here in
+   * Settings) and it replaces the drawn fallback everywhere the mark appears.
+   */
+  logoUrl: string;
 
   // Payment
   upiId: string;

@@ -12,8 +12,14 @@ import {
   Users,
   UserCog,
   AlertCircle,
+  HardDrive,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import {
+  STORAGE_BUDGET_BYTES,
+  formatBytes,
+  localStorageBytesUsed,
+} from '../../lib/imageUpload';
 import { Permission, ROLE_DESCRIPTIONS, ROLE_LABELS } from '../../lib/permissions';
 import { ToastHost, btnPrimary, inputClass } from './ui';
 import { DashboardScreen } from './DashboardScreen';
@@ -146,7 +152,9 @@ const AdminLogin: React.FC = () => {
 /* ------------------------------------------------------------- shell -- */
 
 export const AdminApp: React.FC = () => {
-  const { currentStaff, logoutStaff, hasPermission, orders } = useStore();
+  const { currentStaff, logoutStaff, hasPermission, orders, storageWarning } = useStore();
+  const storageUsed = localStorageBytesUsed();
+  const storagePct = Math.min(100, Math.round((storageUsed / STORAGE_BUDGET_BYTES) * 100));
   const [screen, setScreen] = useState<ScreenId>('dashboard');
 
   if (!currentStaff) {
@@ -195,6 +203,24 @@ export const AdminApp: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {storageWarning && (
+          <p className="mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-[11px] text-rose-800">
+            <AlertCircle className="mt-px h-4 w-4 shrink-0" />
+            <span>{storageWarning}</span>
+          </p>
+        )}
+
+        {storagePct >= 70 && !storageWarning && (
+          <p className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[11px] text-amber-900">
+            <HardDrive className="mt-px h-4 w-4 shrink-0" />
+            <span>
+              Browser storage is {storagePct}% full ({formatBytes(storageUsed)} of{' '}
+              {formatBytes(STORAGE_BUDGET_BYTES)}). Uploaded photos are stored inline here. Prefer
+              image URLs for the rest, or edits will stop saving.
+            </span>
+          </p>
+        )}
 
         <div className="grid gap-4 lg:grid-cols-[13rem_1fr]">
           <nav aria-label="Admin sections" className="lg:sticky lg:top-4 lg:self-start">

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
+import { formatRupees } from '../lib/pricing';
 import { STAGES } from '../lib/orderStages';
 import { 
   X, 
@@ -241,7 +242,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                             {STAGES[ord.stage].label}
                           </span>
                         </div>
-                        <span className="font-bold text-[#241510]">₹{ord.totalAmount}</span>
+                        <span className="font-bold text-[#241510]">{formatRupees(ord.totalAmount)}</span>
                       </div>
                     ))}
                   </div>

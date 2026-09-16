@@ -102,6 +102,8 @@ interface InlineEditProps {
   onSave: (next: number) => string | null;
   prefix?: string;
   suffix?: string;
+  /** Group digits for display (Indian grouping). Editing always shows the raw number. */
+  groupDigits?: boolean;
   disabled?: boolean;
   label: string;
   className?: string;
@@ -112,6 +114,7 @@ export const InlineEditNumber: React.FC<InlineEditProps> = ({
   onSave,
   prefix = '',
   suffix = '',
+  groupDigits = false,
   disabled = false,
   label,
   className = '',
@@ -154,11 +157,13 @@ export const InlineEditNumber: React.FC<InlineEditProps> = ({
     setEditing(false);
   };
 
+  const shown = groupDigits ? value.toLocaleString('en-IN') : String(value);
+
   if (disabled) {
     return (
       <span className={`tabular-nums text-[#8C766B] ${className}`}>
         {prefix}
-        {value}
+        {shown}
         {suffix}
       </span>
     );
@@ -198,7 +203,7 @@ export const InlineEditNumber: React.FC<InlineEditProps> = ({
       } ${className}`}
     >
       {prefix}
-      {value}
+      {shown}
       {suffix}
       {error && <span className="ml-1 text-[10px] text-rose-600">!</span>}
     </button>

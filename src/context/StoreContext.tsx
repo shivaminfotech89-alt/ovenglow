@@ -115,7 +115,7 @@ const STORAGE_KEYS = {
 export type Result = { success: boolean; message: string };
 
 /** State that mirrors itself into localStorage on every change. */
-function usePersistentState<T>(key: string, fallback: T) {
+function usePersistentState<T>(key: string, fallback: T, onError?: (message: string) => void) {
   const [value, setValue] = useState<T>(() => {
     try {
       const saved = localStorage.getItem(key);
@@ -128,12 +128,21 @@ function usePersistentState<T>(key: string, fallback: T) {
   useEffect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(value));
+      onError?.('');
     } catch (e) {
-      // Quota exceeded, or storage blocked in a private window. The app keeps
-      // working from memory for this session.
+      // Almost always the quota: uploaded photos are stored inline as data
+      // URLs, and the whole origin gets about 5 MB. Failing silently here would
+      // let the shop believe edits were saved when they were not, so it is
+      // surfaced to the admin instead.
+      const quota = e instanceof DOMException && e.name.includes('Quota');
       console.error(`Could not persist ${key}:`, e);
+      onError?.(
+        quota
+          ? 'Browser storage is full, so the last change was NOT saved. Remove some uploaded photos, or use image URLs instead of uploads.'
+          : 'The last change could not be saved to this browser.',
+      );
     }
-  }, [key, value]);
+  }, [key, value, onError]);
 
   return [value, setValue] as const;
 }
@@ -219,6 +228,9 @@ interface StoreContextType {
   removeStaff: (id: string) => Result;
   hasPermission: (permission: Permission) => boolean;
 
+  /** Non-empty when the last write to browser storage failed (usually the quota). */
+  storageWarning: string;
+
   // Messaging + analytics
   getWhatsAppOrderLink: (order: Order, phone?: string) => string;
   getWhatsAppSupportLink: (topic?: string) => string;
@@ -228,18 +240,29 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [storageWarning, setStorageWarning] = useState<string>('');
+  const reportStorage = useCallback((message: string) => {
+    setStorageWarning((prev) => (prev === message ? prev : message));
+  }, []);
+
   const [storeSettings, setStoreSettings] = usePersistentState<StoreSettings>(
     STORAGE_KEYS.SETTINGS,
     DEFAULT_STORE_SETTINGS,
+    reportStorage,
   );
   const [products, setProducts] = usePersistentState<Product[]>(
     STORAGE_KEYS.PRODUCTS,
     INITIAL_PRODUCTS,
+    reportStorage,
   );
-  const [orders, setOrders] = usePersistentState<Order[]>(STORAGE_KEYS.ORDERS, []);
+  const [orders, setOrders] = usePersistentState<Order[]>(STORAGE_KEYS.ORDERS, [], reportStorage);
   const [cart, setCart] = usePersistentState<CartItem[]>(STORAGE_KEYS.CART, []);
   const [coupons, setCoupons] = usePersistentState<Coupon[]>(STORAGE_KEYS.COUPONS, INITIAL_COUPONS);
-  const [banners, setBanners] = usePersistentState<Banner[]>(STORAGE_KEYS.BANNERS, INITIAL_BANNERS);
+  const [banners, setBanners] = usePersistentState<Banner[]>(
+    STORAGE_KEYS.BANNERS,
+    INITIAL_BANNERS,
+    reportStorage,
+  );
   const [staff, setStaff] = usePersistentState<StaffUser[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF);
   const [currentStaff, setCurrentStaff] = usePersistentState<StaffUser | null>(
     STORAGE_KEYS.SESSION,
@@ -1058,6 +1081,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updateStaff,
     removeStaff,
     hasPermission,
+    storageWarning,
 
     getWhatsAppOrderLink,
     getWhatsAppSupportLink,

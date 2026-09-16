@@ -73,6 +73,13 @@ export function calculateTotals(
   };
 }
 
+/**
+ * The only way money is rendered.
+ *
+ * `en-IN` grouping is the point: Indian numbering groups by lakh and crore, so
+ * 123456 must read ₹1,23,456 rather than ₹123,456 or the bare ₹123456 that
+ * string interpolation produces.
+ */
 export function formatRupees(amount: number): string {
-  return `₹${amount.toLocaleString('en-IN')}`;
+  return `₹${Math.round(amount).toLocaleString('en-IN')}`;
 }

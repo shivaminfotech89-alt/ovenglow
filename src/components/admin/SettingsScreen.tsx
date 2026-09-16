@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AlertCircle, MapPin, Plus, Save, X } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { StoreSettings } from '../../types';
+import { ImageField } from './ImageField';
 import { Field, btnGhost, btnPrimary, inputClass, useToast } from './ui';
 
 export const SettingsScreen: React.FC = () => {
@@ -90,31 +91,13 @@ export const SettingsScreen: React.FC = () => {
           <Field label="GSTIN">
             <input value={form.gstin} onChange={(e) => set('gstin', e.target.value)} className={`${inputClass} font-mono`} />
           </Field>
-          <Field
+          <ImageField
             label="Logo image"
-            hint="Put the file at public/logo.png, or paste any image URL. Leave blank to use the drawn mark."
+            hint="Pick your logo from the gallery, or point at public/logo.png. Blank uses the drawn mark."
+            value={form.logoUrl}
+            onChange={(logoUrl) => set('logoUrl', logoUrl)}
             className="sm:col-span-2"
-          >
-            <div className="flex items-center gap-3">
-              {form.logoUrl ? (
-                <img
-                  src={form.logoUrl}
-                  alt="Logo preview"
-                  className="h-12 w-12 shrink-0 rounded-full border border-[#E8DFD8] object-cover"
-                />
-              ) : (
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-dashed border-[#E8DFD8] text-[9px] text-[#A69286]">
-                  none
-                </span>
-              )}
-              <input
-                value={form.logoUrl}
-                onChange={(e) => set('logoUrl', e.target.value)}
-                placeholder="/logo.png"
-                className={inputClass}
-              />
-            </div>
-          </Field>
+          />
         </div>
       </section>
 
@@ -143,9 +126,13 @@ export const SettingsScreen: React.FC = () => {
           <Field label="UPI account holder name">
             <input value={form.upiAccountName} onChange={(e) => set('upiAccountName', e.target.value)} className={inputClass} />
           </Field>
-          <Field label="UPI QR image URL" hint="Optional — show your own bank's QR instead." className="sm:col-span-2">
-            <input value={form.upiQrImage} onChange={(e) => set('upiQrImage', e.target.value)} className={inputClass} />
-          </Field>
+          <ImageField
+            label="UPI QR image"
+            hint="Optional — upload a screenshot of your bank's QR code to show at checkout."
+            value={form.upiQrImage}
+            onChange={(upiQrImage) => set('upiQrImage', upiQrImage)}
+            className="sm:col-span-2"
+          />
           <Field label="Payment instructions" hint="Shown to the customer at checkout." className="sm:col-span-2">
             <textarea
               rows={2}

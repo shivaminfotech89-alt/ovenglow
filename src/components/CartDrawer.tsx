@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
+import { formatRupees } from '../lib/pricing';
 import { 
   X, 
   Trash2, 
@@ -92,10 +93,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                 {isFreeDelivery ? (
                   <span className="text-emerald-800 font-medium">Free delivery unlocked!</span>
                 ) : (
-                  <span>Add ₹{amountNeededForFreeDelivery} more for free delivery</span>
+                  <span>Add {formatRupees(amountNeededForFreeDelivery)} more for free delivery</span>
                 )}
               </span>
-              <span className="font-mono text-[#8C766B] text-[10px]">₹{freeDeliveryThreshold}</span>
+              <span className="font-mono text-[#8C766B] text-[10px]">{formatRupees(freeDeliveryThreshold)}</span>
             </div>
             <div className="w-full h-1.5 rounded-full bg-[#E8DFD8] overflow-hidden">
               <div 
@@ -142,7 +143,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                     </h5>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="font-medium text-[#241510] text-xs">
-                        ₹{item.product.price}
+                        {formatRupees(item.product.price)}
                       </span>
                       {item.product.isVeg && (
                         <div className="w-3 h-3 rounded-xs border border-emerald-600 flex items-center justify-center">
@@ -178,7 +179,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                       </div>
 
                       <span className="font-medium text-xs text-[#241510] ml-auto">
-                        ₹{item.product.price * item.quantity}
+                        {formatRupees(item.product.price * item.quantity)}
                       </span>
                     </div>
                   </div>
@@ -245,13 +246,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
               <div className="space-y-1 text-xs text-[#6B574E] pt-1">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span className="text-[#241510] font-medium">₹{itemTotal}</span>
+                  <span className="text-[#241510] font-medium">{formatRupees(itemTotal)}</span>
                 </div>
 
                 {discount > 0 && (
                   <div className="flex justify-between text-emerald-800 font-medium">
                     <span>Discount</span>
-                    <span>-₹{discount}</span>
+                    <span>−{formatRupees(discount)}</span>
                   </div>
                 )}
 
@@ -264,12 +265,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
 
                 <div className="flex justify-between">
                   <span>Bakery GST ({storeSettings.gstPercent}% included)</span>
-                  <span className="text-[#241510]">₹{tax}</span>
+                  <span className="text-[#241510]">{formatRupees(tax)}</span>
                 </div>
 
                 <div className="pt-2 border-t border-[#F0EAE1] flex justify-between items-baseline text-sm font-bold text-[#241510]">
                   <span className="font-serif">Total</span>
-                  <span className="text-lg font-bold text-[#241510]">₹{finalTotal}</span>
+                  <span className="text-lg font-bold text-[#241510]">{formatRupees(finalTotal)}</span>
                 </div>
               </div>
 

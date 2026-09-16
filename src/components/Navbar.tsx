@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
+import { formatRupees } from '../lib/pricing';
 import { OvenglowLogo } from './OvenglowLogo';
 import { 
   ShoppingBag, 
@@ -256,7 +257,7 @@ export const Navbar: React.FC = () => {
               </span>
               {totalCartAmount > 0 && (
                 <span className="font-mono text-xs font-normal border-l border-white/20 pl-1.5 hidden md:inline">
-                  ₹{totalCartAmount}
+                  {formatRupees(totalCartAmount)}
                 </span>
               )}
             </button>

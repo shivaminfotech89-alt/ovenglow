@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Copy, Download, Eye, EyeOff, Plus, Search, Trash2 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { ImageField } from './ImageField';
 import { PRODUCT_CATEGORIES, Product, ProductCategory, needsPricing } from '../../types';
 import {
   Drawer,
@@ -309,6 +310,7 @@ export const ProductsScreen: React.FC = () => {
                     <InlineEditNumber
                       label={`stock for ${p.name}`}
                       value={p.stockCount}
+                      groupDigits
                       disabled={!canEdit}
                       onSave={(next) => {
                         const res = updateProduct(p.id, { stockCount: next });
@@ -328,6 +330,7 @@ export const ProductsScreen: React.FC = () => {
                       label={`price for ${p.name}`}
                       value={p.price}
                       prefix="₹"
+                      groupDigits
                       disabled={!canEdit}
                       onSave={(next) => {
                         const res = updateProduct(p.id, { price: next });
@@ -340,6 +343,7 @@ export const ProductsScreen: React.FC = () => {
                       label={`MRP for ${p.name}`}
                       value={p.originalPrice}
                       prefix="₹"
+                      groupDigits
                       disabled={!canEdit}
                       onSave={(next) => {
                         if (next < p.price) return 'MRP cannot be below the selling price.';
@@ -482,14 +486,20 @@ export const ProductsScreen: React.FC = () => {
               ))}
             </select>
           </Field>
-          <Field label="Image URL">
-            <input
-              value={form.image}
-              onChange={(e) => setForm({ ...form, image: e.target.value })}
-              placeholder="https://…"
-              className={inputClass}
-            />
-          </Field>
+          <ImageField
+            label="Product photo"
+            hint="Pick from your gallery, drag one in, or paste a URL."
+            value={form.image}
+            onChange={(image) => setForm({ ...form, image })}
+          />
+
+          <ImageField
+            label="Second photo (optional)"
+            value={form.secondaryImages[0] ?? ''}
+            onChange={(img) =>
+              setForm({ ...form, secondaryImages: img ? [img, ...form.secondaryImages.slice(1)] : form.secondaryImages.slice(1) })
+            }
+          />
           <Field label="Shelf life">
             <input
               value={form.shelfLife}

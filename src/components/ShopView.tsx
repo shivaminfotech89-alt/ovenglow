@@ -1,5 +1,6 @@
 import React from 'react';
 import { useStore } from '../context/StoreContext';
+import { formatRupees } from '../lib/pricing';
 import { ProductCard } from './ProductCard';
 import { PRODUCT_CATEGORIES, Product, ProductCategory } from '../types';
 import { 
@@ -235,7 +236,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
 
               <div className="flex items-center gap-2 px-4 py-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 text-xs font-medium text-[#E8DFD8]">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Free delivery over ₹{storeSettings.freeDeliveryThreshold}</span>
+                <span>Free delivery over {formatRupees(storeSettings.freeDeliveryThreshold)}</span>
               </div>
             </div>
           </div>

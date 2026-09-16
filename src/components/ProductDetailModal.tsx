@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
 import { useStore } from '../context/StoreContext';
+import { formatRupees } from '../lib/pricing';
 import { ProductImage } from './ProductImage';
 import { 
   X, 
@@ -133,9 +134,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
 
             {/* Pricing */}
             <div className="flex items-baseline gap-2.5 mt-3">
-              <span className="text-2xl font-bold font-sans text-[#241510]">₹{product.price}</span>
+              <span className="text-2xl font-bold font-sans text-[#241510]">{formatRupees(product.price)}</span>
               {product.originalPrice > product.price && (
-                <span className="text-[#9E8B80] line-through text-sm">₹{product.originalPrice}</span>
+                <span className="text-[#9E8B80] line-through text-sm">{formatRupees(product.originalPrice)}</span>
               )}
               <span className="text-xs font-medium text-emerald-800">
                 Inclusive of GST
@@ -219,7 +220,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                 ) : (
                   <>
                     <ShoppingBag className="w-4 h-4 text-[#C58940]" />
-                    <span>Add to Bag • ₹{product.price * quantity}</span>
+                    <span>Add to Bag • {formatRupees(product.price * quantity)}</span>
                   </>
                 )}
               </button>

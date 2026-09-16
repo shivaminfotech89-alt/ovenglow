@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { Banner, BannerSlot, PRODUCT_CATEGORIES, ProductCategory } from '../../types';
+import { ImageField } from './ImageField';
 import { Drawer, EmptyState, Field, btnGhost, btnPrimary, inputClass, useToast } from './ui';
 
 const SLOTS: { id: BannerSlot; label: string; hint: string }[] = [
@@ -206,14 +207,13 @@ export const BannersScreen: React.FC = () => {
               className={inputClass}
             />
           </Field>
-          <Field label="Image URL">
-            <input
-              value={draft.image}
-              onChange={(e) => setDraft({ ...draft, image: e.target.value })}
-              placeholder="https://…"
-              className={inputClass}
-            />
-          </Field>
+          <ImageField
+            label="Tile image"
+            hint="Pick from your gallery, drag one in, or paste a URL."
+            value={draft.image}
+            onChange={(image) => setDraft({ ...draft, image })}
+            aspect="wide"
+          />
           <Field
             label="Shows products from"
             hint="A tile with no category opens an empty shop."

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
 import { useStore } from '../context/StoreContext';
+import { formatRupees } from '../lib/pricing';
 import { ProductImage } from './ProductImage';
 import { 
   Star, 
@@ -113,17 +114,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
           <div className="flex flex-col">
             <div className="flex items-baseline gap-1">
               <span className="text-sm sm:text-base font-bold text-[#241510] font-sans">
-                ₹{product.price}
+                {formatRupees(product.price)}
               </span>
               {product.originalPrice > product.price && (
                 <span className="text-[10px] sm:text-[11px] text-[#9E8B80] line-through">
-                  ₹{product.originalPrice}
+                  {formatRupees(product.originalPrice)}
                 </span>
               )}
             </div>
             {product.originalPrice > product.price && (
               <span className="text-[9px] font-bold text-emerald-700">
-                Save ₹{product.originalPrice - product.price}
+                Save {formatRupees(product.originalPrice - product.price)}
               </span>
             )}
           </div>

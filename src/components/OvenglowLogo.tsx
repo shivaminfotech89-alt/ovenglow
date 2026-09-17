@@ -30,7 +30,7 @@ const SIZES = {
   sm: {
     box: 'h-11 w-11 sm:h-12 sm:w-12',
     textSize: 'text-sm sm:text-base',
-    subSize: 'text-[9px] sm:text-[10px]',
+    subSize: 'text-[10px] sm:text-[11px]',
     detail: 'simple' as const,
   },
   md: {

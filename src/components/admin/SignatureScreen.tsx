@@ -120,7 +120,7 @@ export const SignatureScreen: React.FC = () => {
                         aria-label="Move up"
                         disabled={index === 0}
                         onClick={() => move(index, -1)}
-                        className="rounded-md border border-[#E8DFD8] p-1 text-[#5C4033] hover:border-[#8C766B] disabled:opacity-30"
+                        className="flex h-9 w-9 items-center justify-center rounded-md border border-[#E8DFD8] text-[#5C4033] hover:border-[#8C766B] disabled:opacity-30"
                       >
                         <ArrowUp className="h-3 w-3" />
                       </button>
@@ -129,7 +129,7 @@ export const SignatureScreen: React.FC = () => {
                         aria-label="Move down"
                         disabled={index === featured.length - 1}
                         onClick={() => move(index, 1)}
-                        className="rounded-md border border-[#E8DFD8] p-1 text-[#5C4033] hover:border-[#8C766B] disabled:opacity-30"
+                        className="flex h-9 w-9 items-center justify-center rounded-md border border-[#E8DFD8] text-[#5C4033] hover:border-[#8C766B] disabled:opacity-30"
                       >
                         <ArrowDown className="h-3 w-3" />
                       </button>
@@ -192,7 +192,7 @@ export const SignatureScreen: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => removeFromCollection(product)}
-                        className="ml-auto inline-flex items-center gap-1 text-[#8C766B] hover:text-rose-600"
+                        className="ml-auto inline-flex min-h-9 items-center gap-1 text-[#8C766B] hover:text-rose-600"
                       >
                         <X className="h-3 w-3" /> Remove from collection
                       </button>

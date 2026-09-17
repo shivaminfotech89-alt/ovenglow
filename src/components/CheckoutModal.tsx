@@ -143,7 +143,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
               </p>
             </div>
           </div>
-          <button onClick={onClose} aria-label="Close checkout" className="rounded-full p-1.5 text-[#8C766B] hover:bg-[#FAF7F2] hover:text-[#241510]">
+          <button onClick={onClose} aria-label="Close checkout" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#8C766B] hover:bg-[#FAF7F2] hover:text-[#241510]">
             <X className="h-4 w-4" />
           </button>
         </div>

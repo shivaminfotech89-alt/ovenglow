@@ -450,7 +450,68 @@ export const OrdersScreen: React.FC = () => {
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[#E8DFD8] bg-white">
+        <>
+        {/* Phones get cards. A six-column table on a 360px screen is a
+            desktop pattern wearing a scrollbar: every cell is too narrow to
+            read and every control too small to hit. */}
+        <ul className="space-y-2.5 lg:hidden">
+          {filtered.map((o) => {
+            const next = getNextStages(o);
+            return (
+              <li key={o.id}>
+                <button
+                  type="button"
+                  onClick={() => setOpenId(o.id)}
+                  className="w-full rounded-2xl border border-[#E8DFD8] bg-white p-4 text-left transition-colors hover:border-[#8C766B]"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-mono text-sm font-semibold text-[#241510]">
+                      {o.orderNumber}
+                    </span>
+                    <StageBadge stage={o.stage} />
+                  </div>
+
+                  <div className="mt-2 flex items-end justify-between gap-3">
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-medium text-[#241510]">
+                        {o.customer.name}
+                      </span>
+                      <span className="block font-mono text-[11px] text-[#8C766B]">
+                        {o.customer.city} · {o.customer.phone}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right">
+                      <span className="block text-sm font-semibold tabular-nums text-[#241510]">
+                        {formatRupees(o.totalAmount)}
+                      </span>
+                      <span className="block text-[10px] text-[#8C766B]">
+                        {new Date(o.createdAt).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[#F0EAE3] pt-2.5 text-[11px]">
+                    <span className="text-[#5C4033]">{o.paymentMethod}</span>
+                    {o.stage === 'payment_verification_pending' && (
+                      <span className="font-medium text-amber-700">needs checking</span>
+                    )}
+                    {o.payment.verifiedAt && <span className="text-emerald-700">verified</span>}
+                    {next.length > 0 && hasPermission('orders.advance') && (
+                      <span className="ml-auto inline-flex items-center gap-1 font-medium text-[#241510]">
+                        {STAGES[next[0]].label} <ArrowRight className="h-3 w-3" />
+                      </span>
+                    )}
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="hidden overflow-x-auto rounded-2xl border border-[#E8DFD8] bg-white lg:block">
           <table className="w-full min-w-[52rem] text-left text-xs">
             <thead>
               <tr className="border-b border-[#E8DFD8] bg-[#FAF7F2] text-[10px] uppercase tracking-wider text-[#8C766B]">
@@ -524,6 +585,7 @@ export const OrdersScreen: React.FC = () => {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <Drawer

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
+import { ProductImage } from './ProductImage';
 import { formatRupees } from '../lib/pricing';
 import { 
   X, 
@@ -29,10 +30,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
     applyCoupon,
     removeCoupon,
     totals,
-    storeSettings
+    storeSettings,
+    coupons
   } = useStore();
 
   const [couponInput, setCouponInput] = useState('');
+
+  // Only ever suggest a code that actually works today.
+  const exampleCoupon =
+    coupons.find(
+      (c) => c.isActive && (!c.expiresAt || new Date(c.expiresAt).getTime() > Date.now()),
+    )?.code ?? null;
   const [couponFeedback, setCouponFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
   if (!isCartOpen) return null;
@@ -79,7 +87,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
 
             <button
               onClick={() => setIsCartOpen(false)}
-              className="p-1.5 rounded-full hover:bg-[#FAF7F2] text-[#8C766B] hover:text-[#241510] transition-colors"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-[#8C766B] transition-colors hover:bg-[#FAF7F2] hover:text-[#241510]"
             >
               <X className="w-5 h-5" />
             </button>
@@ -130,12 +138,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                   key={item.product.id}
                   className="p-3 rounded-xl bg-white border border-[#E8DFD8] flex items-center gap-3 relative shadow-xs"
                 >
-                  <img
-                    src={item.product.image}
-                    alt={item.product.name}
-                    referrerPolicy="no-referrer"
-                    className="w-14 h-14 rounded-lg object-cover border border-[#F0EAE1] shrink-0"
-                  />
+                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-[#F0EAE1]">
+                    <ProductImage
+                      src={item.product.image}
+                      alt={item.product.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
 
                   <div className="flex-1 min-w-0">
                     <h5 className="font-serif font-bold text-[#241510] text-xs truncate">
@@ -162,7 +171,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                       <div className="flex items-center rounded-full bg-[#FAF7F2] border border-[#E8DFD8] text-[#241510] overflow-hidden text-xs">
                         <button
                           onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}
-                          className="px-2 py-0.5 hover:bg-[#E8DFD8] transition-colors"
+                          className="flex h-9 w-9 items-center justify-center transition-colors hover:bg-[#E8DFD8]"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
@@ -172,7 +181,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                         <button
                           onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}
                           disabled={item.quantity >= item.product.stockCount}
-                          className="px-2 py-0.5 hover:bg-[#E8DFD8] disabled:opacity-30 transition-colors"
+                          className="flex h-9 w-9 items-center justify-center transition-colors hover:bg-[#E8DFD8] disabled:opacity-30"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
@@ -187,7 +196,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                   {/* Remove button */}
                   <button
                     onClick={() => removeFromCart(item.product.id)}
-                    className="p-1 text-[#8C766B] hover:text-rose-600 transition-colors self-start"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center self-start rounded-md text-[#8C766B] transition-colors hover:bg-rose-50 hover:text-rose-600"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -221,7 +230,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                       <Tag className="w-3.5 h-3.5 text-[#9E8B80] absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
-                        placeholder="Promo code (e.g. GLOW10)"
+                        placeholder={exampleCoupon ? `Promo code (e.g. ${exampleCoupon})` : 'Promo code'}
                         value={couponInput}
                         onChange={(e) => setCouponInput(e.target.value)}
                         className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#E8DFD8] focus:border-[#241510] text-xs text-[#241510] placeholder:text-[#9E8B80] focus:outline-none"
@@ -289,7 +298,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
 
               <div className="flex items-center justify-center gap-2 text-[10px] text-[#8C766B]">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-                <span>UPI • Cards • NetBanking • Cash on Delivery</span>
+                <span>UPI • Cash on Delivery</span>
               </div>
             </div>
           )}

@@ -82,7 +82,7 @@ export const Footer: React.FC = () => {
               href={getWhatsAppSupportLink('General Inquiry')}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs transition-colors"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-emerald-700 px-4 text-xs font-medium text-white transition-colors hover:bg-emerald-800"
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>WhatsApp Concierge</span>
@@ -102,7 +102,7 @@ export const Footer: React.FC = () => {
                     setActiveTab('shop');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="hover:text-white transition-colors"
+                  className="inline-flex min-h-9 items-center transition-colors hover:text-white"
                 >
                   {c.label}
                 </button>
@@ -115,10 +115,10 @@ export const Footer: React.FC = () => {
         <div className="space-y-3">
           <span className="text-[#C58940] font-medium uppercase tracking-wider text-xs block">Support & Orders</span>
           <ul className="space-y-2 text-[#A69286] text-xs">
-            <li><button onClick={() => setActiveTab('track')} className="hover:text-white transition-colors">Track Live Order</button></li>
-            <li><button onClick={() => setIsCustomerAuthOpen(true)} className="hover:text-white transition-colors">Customer Account & Mobile Login</button></li>
-            <li><a href={getWhatsAppSupportLink('Bulk Corporate Gifting')} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Corporate Gifting</a></li>
-            <li><a href={getWhatsAppSupportLink('Custom Wedding Cakes')} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Event & Wedding Cakes</a></li>
+            <li><button onClick={() => setActiveTab('track')} className="inline-flex min-h-9 items-center transition-colors hover:text-white">Track Live Order</button></li>
+            <li><button onClick={() => setIsCustomerAuthOpen(true)} className="inline-flex min-h-9 items-center transition-colors hover:text-white">Customer Account & Mobile Login</button></li>
+            <li className="flex"><a href={getWhatsAppSupportLink('Bulk Corporate Gifting')} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center transition-colors hover:text-white">Corporate Gifting</a></li>
+            <li className="flex"><a href={getWhatsAppSupportLink('Custom Wedding Cakes')} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center transition-colors hover:text-white">Event & Wedding Cakes</a></li>
             {storeSettings.fssaiLicense ? (
               <li><span className="text-[#8C766B]">FSSAI Lic. {storeSettings.fssaiLicense}</span></li>
             ) : (

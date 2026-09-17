@@ -198,7 +198,7 @@ export const InlineEditNumber: React.FC<InlineEditProps> = ({
       type="button"
       onClick={() => setEditing(true)}
       title={error ?? `Click to edit ${label}`}
-      className={`group rounded-md px-1.5 py-0.5 text-left tabular-nums transition-colors hover:bg-[#F5EFE6] ${
+      className={`group inline-flex min-h-9 min-w-10 items-center justify-end rounded-md px-1.5 text-right tabular-nums transition-colors hover:bg-[#F5EFE6] ${
         error ? 'text-rose-700' : 'text-[#241510]'
       } ${className}`}
     >
@@ -254,13 +254,13 @@ export const Field: React.FC<{
 );
 
 export const inputClass =
-  'w-full rounded-lg border border-[#E8DFD8] bg-white px-3 py-2 text-xs text-[#241510] placeholder:text-[#A69286] focus:border-[#241510] focus:outline-none';
+  'w-full min-h-10 rounded-lg border border-[#E8DFD8] bg-white px-3 py-2 text-xs text-[#241510] placeholder:text-[#A69286] focus:border-[#241510] focus:outline-none';
 
 export const btnPrimary =
-  'inline-flex items-center justify-center gap-2 rounded-lg bg-[#241510] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#3D2317] disabled:cursor-not-allowed disabled:opacity-40';
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#241510] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#3D2317] disabled:cursor-not-allowed disabled:opacity-40';
 
 export const btnGhost =
-  'inline-flex items-center justify-center gap-2 rounded-lg border border-[#E8DFD8] bg-white px-3 py-2 text-xs font-medium text-[#5C4033] transition-colors hover:border-[#8C766B] hover:text-[#241510] disabled:cursor-not-allowed disabled:opacity-40';
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#E8DFD8] bg-white px-3 text-xs font-medium text-[#5C4033] transition-colors hover:border-[#8C766B] hover:text-[#241510] disabled:cursor-not-allowed disabled:opacity-40';
 
 export const Spinner: React.FC = () => <Loader2 className="h-4 w-4 animate-spin" />;
 

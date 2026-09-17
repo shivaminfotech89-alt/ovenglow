@@ -342,7 +342,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-4 py-2 rounded-full text-xs font-medium shrink-0 flex items-center gap-1.5 transition-all select-none border ${
+                className={`flex min-h-10 shrink-0 select-none items-center gap-1.5 rounded-full border px-4 text-xs font-medium transition-all ${
                   isSelected 
                     ? 'bg-[#2A1810] text-white border-[#2A1810] shadow-sm' 
                     : 'bg-white border-[#E8DFD8] text-[#5C4033] hover:border-[#2A1810] hover:text-[#2A1810]'
@@ -416,7 +416,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
                 setSelectedCategory('all');
                 setSearchQuery('');
               }}
-              className="mt-2 px-5 py-2 rounded-full bg-[#2A1810] text-white font-medium text-xs shadow-sm hover:bg-[#3D2317]"
+              className="mt-2 min-h-10 px-5 rounded-full bg-[#2A1810] text-white font-medium text-xs shadow-sm hover:bg-[#3D2317]"
             >
               Reset Filters
             </button>
@@ -486,7 +486,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
 
           <a
             href="mailto:ovenglowdelights@gmail.com?subject=Custom%20Ovenglow%20Gifting%20Inquiry"
-            className="inline-flex items-center gap-1.5 font-bold text-[#2A1810] hover:text-[#C58940] transition-colors"
+            className="inline-flex min-h-11 items-center gap-1.5 font-bold text-[#2A1810] transition-colors hover:text-[#C58940]"
           >
             <span>Request Bespoke Tasting Box</span>
             <ArrowRight className="w-3.5 h-3.5" />

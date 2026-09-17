@@ -33,6 +33,16 @@ const CATEGORY_ICONS: Record<ProductCategory, typeof Sparkles> = {
   'cheesecake-heaven': CakeSlice,
 };
 
+/** The shop's promises, in the owner's words. Emoji are decorative; the
+    label carries the meaning, so they are hidden from screen readers. */
+const OUR_PROMISE: { emoji: string; label: string }[] = [
+  { emoji: '🤎', label: 'Homemade with heart' },
+  { emoji: '🍫', label: 'Premium ingredients' },
+  { emoji: '✨', label: 'Handcrafted in small batches' },
+  { emoji: '🔥', label: 'Freshly prepared' },
+  { emoji: '🎁', label: 'Perfect for gifting & celebrations' },
+];
+
 interface ShopViewProps {
   onOpenProductDetails: (product: Product) => void;
 }
@@ -243,6 +253,36 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
         </div>
       </div>
 
+      {/* Our Promise -- sits directly under the hero so it is read before the
+          catalogue, and is the only place these promises appear on the page. */}
+      <section aria-labelledby="our-promise-heading" className="rounded-2xl sm:rounded-3xl border border-[#EADBCE] bg-[#FAF5EE] p-5 sm:p-7">
+        <div className="mb-4 flex items-center gap-2.5">
+          <Sparkles className="h-4 w-4 shrink-0 text-[#C58940]" />
+          <h2
+            id="our-promise-heading"
+            className="font-serif text-xl font-bold tracking-tight text-[#2A1810] sm:text-2xl"
+          >
+            Our Promise
+          </h2>
+        </div>
+
+        <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+          {OUR_PROMISE.map((item) => (
+            <li
+              key={item.label}
+              className="flex items-center gap-3 rounded-xl border border-[#E8DFD8] bg-white p-3.5 lg:flex-col lg:items-start lg:gap-2"
+            >
+              <span aria-hidden="true" className="text-2xl leading-none">
+                {item.emoji}
+              </span>
+              <span className="text-xs font-medium leading-snug text-[#2A1810] sm:text-[13px]">
+                {item.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       {/* Category Filter & Active Top-Bar Search Section */}
       <div className="space-y-3">
         {/* Categories Pill Navigation */}
@@ -366,38 +406,26 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
           </p>
         </div>
 
-        {/* Promises, in the brand's own words from the printed catalogue. The
+        {/* Only the factual tile remains here; the promises themselves live in
+            the Our Promise section above rather than being said twice. The
             FSSAI tile appears only once a real licence number is on file --
             claiming certification without one is a claim we cannot back. */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-          <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
-            <span className="font-serif font-bold text-sm text-[#2A1810] block">Fresh Ingredients</span>
-            <p className="text-[11px] text-[#8C766B]">Bought in and baked with, not held on a shelf.</p>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
-            <span className="font-serif font-bold text-sm text-[#2A1810] block">Homemade Goodness</span>
-            <p className="text-[11px] text-[#8C766B]">Small batches, made to order in our own kitchen.</p>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
-            <span className="font-serif font-bold text-sm text-[#2A1810] block">For Every Occasion</span>
-            <p className="text-[11px] text-[#8C766B]">Celebrations, gifting, or a treat on an ordinary day.</p>
-          </div>
-
+        <div className="pt-1">
           {storeSettings.fssaiLicense ? (
-            <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
-              <span className="font-serif font-bold text-sm text-[#2A1810] block">FSSAI Licensed</span>
-              <p className="text-[11px] text-[#8C766B]">Lic. {storeSettings.fssaiLicense}</p>
+            <div className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-[#E8DFD8] bg-white px-4 py-2.5">
+              <span className="font-serif text-sm font-bold text-[#2A1810]">FSSAI Licensed</span>
+              <span className="font-mono text-[11px] text-[#8C766B]">
+                Lic. {storeSettings.fssaiLicense}
+              </span>
             </div>
           ) : (
-            <div className="bg-white p-4 rounded-xl border border-[#E8DFD8] space-y-1">
-              <span className="font-serif font-bold text-sm text-[#2A1810] block">Order on WhatsApp</span>
-              <p className="text-[11px] text-[#8C766B]">
+            <div className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-[#E8DFD8] bg-white px-4 py-2.5">
+              <span className="font-serif text-sm font-bold text-[#2A1810]">Order on WhatsApp</span>
+              <span className="text-[11px] text-[#8C766B]">
                 {storeSettings.whatsappNumber
                   ? `Message us on ${storeSettings.whatsappNumber}`
                   : 'Message us to place an order'}
-              </p>
+              </span>
             </div>
           )}
         </div>

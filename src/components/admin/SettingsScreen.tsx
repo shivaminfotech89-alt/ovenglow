@@ -198,7 +198,7 @@ export const SettingsScreen: React.FC = () => {
           {form.deliveryAreas.map((area, i) => (
             <span
               key={`${area.name}-${i}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#E8DFD8] bg-[#FAF7F2] px-3 py-1 text-[11px] font-medium text-[#241510]"
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-[#E8DFD8] bg-[#FAF7F2] py-0.5 pl-3 pr-1 text-[11px] font-medium text-[#241510]"
             >
               <MapPin className="h-3 w-3 text-[#C58940]" />
               {area.name}
@@ -207,7 +207,7 @@ export const SettingsScreen: React.FC = () => {
                 type="button"
                 aria-label={`Remove ${area.name}`}
                 onClick={() => removeArea(i)}
-                className="ml-0.5 text-[#8C766B] hover:text-rose-600"
+                className="-mr-1 ml-0.5 flex h-8 w-8 items-center justify-center rounded-full text-[#8C766B] hover:bg-rose-50 hover:text-rose-600"
               >
                 <X className="h-3 w-3" />
               </button>

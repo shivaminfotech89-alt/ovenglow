@@ -141,7 +141,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
             >
               <button
                 onClick={() => updateCartQuantity(product.id, quantityInCart - 1)}
-                className="p-1 sm:px-2 hover:bg-[#3D2317] transition-colors"
+                className="flex h-9 w-9 items-center justify-center transition-colors hover:bg-[#3D2317]"
                 aria-label="Decrease quantity"
               >
                 <Minus className="w-3 h-3" />
@@ -150,7 +150,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
               <button
                 onClick={() => updateCartQuantity(product.id, quantityInCart + 1)}
                 disabled={quantityInCart >= product.stockCount}
-                className="p-1 sm:px-2 hover:bg-[#3D2317] disabled:opacity-40 transition-colors"
+                className="flex h-9 w-9 items-center justify-center transition-colors hover:bg-[#3D2317] disabled:opacity-40"
                 aria-label="Increase quantity"
               >
                 <Plus className="w-3 h-3" />
@@ -160,7 +160,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
             <button
               id={`btn-add-product-${product.id}`}
               onClick={handleAdd}
-              className={`px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full font-medium text-xs flex items-center gap-1 transition-all active:scale-95 shadow-xs ${
+              className={`flex min-h-9 items-center gap-1 rounded-full px-4 text-xs font-medium shadow-xs transition-all active:scale-95 ${
                 justAdded
                   ? 'bg-emerald-700 text-white'
                   : 'bg-[#241510] hover:bg-[#3D2317] text-white'

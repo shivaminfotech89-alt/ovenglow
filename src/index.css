@@ -94,3 +94,36 @@
   background: #FF9933;
 }
 
+
+/* Horizontal tab strips scroll on a phone; the bar itself adds nothing. */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ---------------------------------------------------------------- mobile -- */
+
+/*
+ * iOS Safari zooms the whole page when a focused form control has a font
+ * smaller than 16px. Every input here is text-xs (12px), so tapping any field
+ * threw the layout about. 16px on phones stops that; the sm breakpoint hands
+ * the design its smaller type back.
+ */
+@media (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='file']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* A comfortable touch height for every control, not just the ones styled
+     with a utility class. */
+  input:not([type='checkbox']):not([type='radio']):not([type='file']),
+  select {
+    min-height: 44px;
+  }
+}
+
+/* Momentum scrolling inside the horizontal strips (categories, admin tabs). */
+.no-scrollbar {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}

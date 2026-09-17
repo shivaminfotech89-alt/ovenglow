@@ -254,7 +254,135 @@ export const ProductsScreen: React.FC = () => {
       {filtered.length === 0 ? (
         <EmptyState title="No products match" hint="Clear the search or pick another category." />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[#E8DFD8] bg-white">
+        <>
+        {/* Phones get cards: an eight-column inventory table cannot be read or
+            operated on a 360px screen. Stock and price stay inline-editable. */}
+        <ul className="space-y-2.5 lg:hidden">
+          {filtered.map((p) => (
+            <li key={p.id} className="rounded-2xl border border-[#E8DFD8] bg-white p-4">
+              <div className="flex items-start gap-3">
+                {canEdit && (
+                  <label className="-m-2 flex shrink-0 cursor-pointer p-2">
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${p.name}`}
+                    className="mt-1 h-4 w-4 shrink-0 accent-[#241510]"
+                    checked={selected.includes(p.id)}
+                    onChange={(e) =>
+                      setSelected((prev) =>
+                        e.target.checked ? [...prev, p.id] : prev.filter((id) => id !== p.id),
+                      )
+                    }
+                  />
+                  </label>
+                )}
+                <button
+                  type="button"
+                  onClick={() => canEdit && openEdit(p)}
+                  disabled={!canEdit}
+                  className="min-w-0 flex-1 text-left disabled:cursor-default"
+                >
+                  <span className="block text-sm font-medium text-[#241510]">{p.name}</span>
+                  <span className="mt-0.5 block text-[11px] text-[#8C766B]">
+                    {PRODUCT_CATEGORIES.find((c) => c.id === p.category)?.label}
+                    {p.isSignature && <span className="ml-1.5 font-medium text-[#C58940]">· Signature</span>}
+                  </span>
+                  <span className="mt-0.5 block font-mono text-[10px] text-[#A69286]">{p.sku}</span>
+                </button>
+              </div>
+
+              <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-[#F0EAE3] pt-3">
+                <div>
+                  <dt className="text-[10px] uppercase tracking-wider text-[#8C766B]">Stock</dt>
+                  <dd>
+                    <InlineEditNumber
+                      label={`stock for ${p.name}`}
+                      value={p.stockCount}
+                      groupDigits
+                      disabled={!canEdit}
+                      onSave={(next) => {
+                        const res = updateProduct(p.id, { stockCount: next });
+                        return res.success ? null : res.message;
+                      }}
+                    />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-wider text-[#8C766B]">Price</dt>
+                  <dd>
+                    <InlineEditNumber
+                      label={`price for ${p.name}`}
+                      value={p.price}
+                      prefix="₹"
+                      groupDigits
+                      disabled={!canEdit}
+                      onSave={(next) => {
+                        const res = updateProduct(p.id, { price: next });
+                        return res.success ? null : res.message;
+                      }}
+                    />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-wider text-[#8C766B]">MRP</dt>
+                  <dd>
+                    <InlineEditNumber
+                      label={`MRP for ${p.name}`}
+                      value={p.originalPrice}
+                      prefix="₹"
+                      groupDigits
+                      disabled={!canEdit}
+                      onSave={(next) => {
+                        if (next < p.price) return 'MRP cannot be below the selling price.';
+                        const res = updateProduct(p.id, { originalPrice: next });
+                        return res.success ? null : res.message;
+                      }}
+                    />
+                  </dd>
+                </div>
+              </dl>
+
+              <div className="mt-3 flex items-center gap-2 border-t border-[#F0EAE3] pt-3">
+                <button
+                  type="button"
+                  disabled={!canEdit}
+                  onClick={() => updateProduct(p.id, { isPublished: !p.isPublished })}
+                  className={`inline-flex min-h-9 items-center gap-1 rounded-full border px-3 text-[11px] font-medium ${
+                    p.isPublished
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                      : 'border-[#E8DFD8] bg-[#F5EFE6] text-[#8C766B]'
+                  } disabled:cursor-default`}
+                >
+                  {p.isPublished ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                  {p.isPublished ? 'Visible' : 'Hidden'}
+                </button>
+
+                {p.stockCount === 0 ? (
+                  <span className="text-[11px] font-medium text-rose-600">out of stock</span>
+                ) : p.stockCount <= LOW_STOCK_AT ? (
+                  <span className="text-[11px] font-medium text-amber-700">low stock</span>
+                ) : null}
+
+                {canEdit && (
+                  <button
+                    type="button"
+                    aria-label={`Delete ${p.name}`}
+                    onClick={() => {
+                      if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
+                      deleteProduct(p.id);
+                      toast('success', `"${p.name}" deleted.`);
+                    }}
+                    className="ml-auto flex h-9 w-9 items-center justify-center rounded-md text-[#8C766B] hover:bg-rose-50 hover:text-rose-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <div className="hidden overflow-x-auto rounded-2xl border border-[#E8DFD8] bg-white lg:block">
           <table className="w-full min-w-[54rem] text-left text-xs">
             <thead>
               <tr className="border-b border-[#E8DFD8] bg-[#FAF7F2] text-[10px] uppercase tracking-wider text-[#8C766B]">
@@ -263,6 +391,7 @@ export const ProductsScreen: React.FC = () => {
                     <input
                       type="checkbox"
                       aria-label="Select all shown"
+                      className="h-4 w-4 accent-[#241510]"
                       checked={allShownSelected}
                       onChange={(e) =>
                         setSelected(e.target.checked ? filtered.map((p) => p.id) : [])
@@ -287,6 +416,7 @@ export const ProductsScreen: React.FC = () => {
                       <input
                         type="checkbox"
                         aria-label={`Select ${p.name}`}
+                        className="h-4 w-4 accent-[#241510]"
                         checked={selected.includes(p.id)}
                         onChange={(e) =>
                           setSelected((prev) =>
@@ -402,6 +532,7 @@ export const ProductsScreen: React.FC = () => {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <Drawer

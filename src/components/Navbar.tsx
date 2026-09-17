@@ -14,6 +14,19 @@ import {
   Search
 } from 'lucide-react';
 
+type MobileTabId = 'shop' | 'track' | 'account' | 'admin';
+
+const MOBILE_TABS: {
+  id: MobileTabId;
+  label: string;
+  icon: typeof Store;
+}[] = [
+  { id: 'shop', label: 'Shop', icon: Store },
+  { id: 'track', label: 'Track', icon: Truck },
+  { id: 'account', label: 'Account', icon: Phone },
+  { id: 'admin', label: 'Staff', icon: ShieldCheck },
+];
+
 export const Navbar: React.FC = () => {
   const { 
     activeTab, 
@@ -197,7 +210,7 @@ export const Navbar: React.FC = () => {
             <button 
               onClick={() => setIsVegOnly(!isVegOnly)}
               title="Filter vegetarian only"
-              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all border ${
+              className={`hidden min-h-10 sm:flex items-center gap-1.5 px-3 rounded-full text-xs transition-all border ${
                 isVegOnly 
                   ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-medium' 
                   : 'bg-white border-[#E8DFD8] text-[#8C766B] hover:border-[#241510]'
@@ -213,7 +226,7 @@ export const Navbar: React.FC = () => {
             <button
               id="nav-btn-customer-account"
               onClick={() => setIsCustomerAuthOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FAF7F2] hover:bg-[#F2ECE4] border border-[#E8DFD8] text-xs transition-all text-[#241510]"
+              className="hidden min-h-10 sm:flex items-center gap-1.5 rounded-full border border-[#E8DFD8] bg-[#FAF7F2] px-3 text-xs text-[#241510] transition-all hover:bg-[#F2ECE4]"
               title={customerUser ? 'Customer Account & Orders' : 'Sign in with Mobile Number'}
             >
               {customerUser ? (
@@ -239,7 +252,7 @@ export const Navbar: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               title="Concierge Support"
-              className="p-2 rounded-full text-[#25D366] hover:bg-emerald-50 transition-colors"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-[#25D366] transition-colors hover:bg-emerald-50"
             >
               <MessageSquare className="w-4 h-4" />
             </a>
@@ -248,9 +261,9 @@ export const Navbar: React.FC = () => {
             <button
               id="nav-btn-open-cart"
               onClick={() => setIsCartOpen(true)}
-              className="relative px-3 sm:px-3.5 py-1.5 bg-[#241510] hover:bg-[#3D2317] text-white rounded-full text-xs font-medium transition-all flex items-center gap-1.5 shadow-xs active:scale-95"
+              className="relative flex min-h-11 items-center gap-1.5 rounded-full bg-[#241510] px-3.5 text-xs font-medium text-white shadow-xs transition-all hover:bg-[#3D2317] active:scale-95"
             >
-              <ShoppingBag className="w-3.5 h-3.5 text-[#E5A93C]" />
+              <ShoppingBag className="h-4 w-4 text-[#E5A93C]" />
               <span className="hidden sm:inline">Bag</span>
               <span className="bg-white/20 px-1.5 py-0.2 rounded-full text-[10px] font-mono">
                 {totalCartCount}
@@ -361,62 +374,71 @@ export const Navbar: React.FC = () => {
       </header>
 
       {/* Elegant Native-Feeling Bottom Bar on Mobile */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#EBE3DA] px-6 py-2 flex items-center justify-around shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
-        <button
-          onClick={() => {
-            setActiveTab('shop');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg text-[11px] transition-colors ${
-            activeTab === 'shop' ? 'text-[#241510] font-semibold' : 'text-[#8C766B] font-normal'
-          }`}
-        >
-          <Store className={`w-4 h-4 ${activeTab === 'shop' ? 'text-[#C58940]' : 'text-[#8C766B]'}`} />
-          <span>Shop</span>
-        </button>
+      {/* Mobile tab bar.
+          Staff is a permanent tab: the desktop nav that carries it is hidden
+          below xl, and the old bar only showed Console once already signed in,
+          so on a phone there was no way to reach the admin login at all.
+          Heights are 56px with a 44px minimum touch area, and the bar pads
+          itself past the iPhone home indicator. */}
+      <nav
+        aria-label="Primary"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#EBE3DA] bg-white/95 backdrop-blur-md shadow-[0_-4px_12px_rgba(0,0,0,0.04)] lg:hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="flex items-stretch">
+          {MOBILE_TABS.map((tab) => {
+            const isActive =
+              tab.id === 'account' ? false : activeTab === tab.id;
+            const Icon = tab.icon;
+            const label =
+              tab.id === 'account'
+                ? customerUser
+                  ? 'Account'
+                  : 'Sign In'
+                : tab.id === 'admin'
+                  ? currentStaff
+                    ? 'Console'
+                    : 'Staff'
+                  : tab.label;
 
-        <button
-          onClick={() => {
-            setActiveTab('track');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg text-[11px] transition-colors ${
-            activeTab === 'track' ? 'text-[#241510] font-semibold' : 'text-[#8C766B] font-normal'
-          }`}
-        >
-          <Truck className={`w-4 h-4 ${activeTab === 'track' ? 'text-[#C58940]' : 'text-[#8C766B]'}`} />
-          <span>Track</span>
-        </button>
-
-        {currentStaff ? (
-          <button
-            onClick={() => {
-              setActiveTab('admin');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg text-[11px] transition-colors ${
-              activeTab === 'admin' ? 'text-[#241510] font-semibold' : 'text-[#8C766B] font-normal'
-            }`}
-          >
-            <ShieldCheck className={`w-4 h-4 ${activeTab === 'admin' ? 'text-[#C58940]' : 'text-emerald-600'}`} />
-            <span>Console</span>
-          </button>
-        ) : (
-          <button
-            onClick={() => setIsCustomerAuthOpen(true)}
-            className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg text-[11px] text-[#8C766B] hover:text-[#241510] transition-colors"
-          >
-            {customerUser ? (
-              <div className="w-4 h-4 rounded-full bg-[#241510] text-[#E5A93C] text-[9px] flex items-center justify-center font-bold">
-                {customerUser.name.charAt(0).toUpperCase()}
-              </div>
-            ) : (
-              <Phone className="w-4 h-4 text-[#C58940]" />
-            )}
-            <span>{customerUser ? 'Account' : 'Sign In'}</span>
-          </button>
-        )}
-      </div>
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                aria-current={isActive ? 'page' : undefined}
+                onClick={() => {
+                  if (tab.id === 'account') {
+                    setIsCustomerAuthOpen(true);
+                    return;
+                  }
+                  setActiveTab(tab.id);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-1 text-[11px] leading-none transition-colors ${
+                  isActive ? 'font-semibold text-[#241510]' : 'font-normal text-[#8C766B]'
+                }`}
+              >
+                {tab.id === 'account' && customerUser ? (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#241510] text-[10px] font-bold text-[#E5A93C]">
+                    {customerUser.name.charAt(0).toUpperCase()}
+                  </span>
+                ) : (
+                  <Icon
+                    className={`h-5 w-5 ${
+                      isActive
+                        ? 'text-[#C58940]'
+                        : tab.id === 'admin'
+                          ? 'text-emerald-600'
+                          : 'text-[#8C766B]'
+                    }`}
+                  />
+                )}
+                <span className="truncate">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </>
   );
 };

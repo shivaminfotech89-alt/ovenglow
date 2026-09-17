@@ -52,7 +52,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
         <button
           onClick={onClose}
           aria-label="Close dialog"
-          className="absolute top-3.5 right-3.5 z-20 w-8 h-8 rounded-full bg-white/80 hover:bg-white border border-[#E8DFD8] text-[#5C4033] hover:text-[#241510] flex items-center justify-center transition-all shadow-xs"
+          className="absolute right-3 top-3 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-[#E8DFD8] bg-white/90 text-[#5C4033] shadow-xs transition-all hover:bg-white hover:text-[#241510]"
         >
           <X className="w-4 h-4" />
         </button>
@@ -194,7 +194,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
               <div className="flex items-center rounded-lg bg-white border border-[#E8DFD8] overflow-hidden text-xs">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-2.5 py-2 hover:bg-[#FAF7F2] text-[#241510] transition-colors"
+                  className="flex h-10 w-10 items-center justify-center text-[#241510] transition-colors hover:bg-[#FAF7F2]"
                 >
                   -
                 </button>
@@ -202,7 +202,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                 <button
                   onClick={() => setQuantity(Math.min(product.stockCount, quantity + 1))}
                   disabled={quantity >= product.stockCount}
-                  className="px-2.5 py-2 hover:bg-[#FAF7F2] text-[#241510] disabled:opacity-40 transition-colors"
+                  className="flex h-10 w-10 items-center justify-center text-[#241510] transition-colors hover:bg-[#FAF7F2] disabled:opacity-40"
                 >
                   +
                 </button>

@@ -136,7 +136,7 @@ const AdminLogin: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setEmail(s.email)}
-                  className="truncate font-mono text-[#5C4033] underline decoration-[#E8DFD8] underline-offset-2 hover:text-[#241510]"
+                  className="inline-flex min-h-9 items-center truncate font-mono text-[#5C4033] underline decoration-[#E8DFD8] underline-offset-2 hover:text-[#241510]"
                 >
                   {s.email}
                 </button>
@@ -201,7 +201,7 @@ export const AdminApp: React.FC = () => {
             <button
               type="button"
               onClick={logoutStaff}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#E8DFD8] px-3 py-1.5 text-xs font-medium text-[#5C4033] transition-colors hover:border-[#8C766B] hover:text-[#241510]"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#E8DFD8] px-3 text-xs font-medium text-[#5C4033] transition-colors hover:border-[#8C766B] hover:text-[#241510]"
             >
               <LogOut className="h-3.5 w-3.5" /> Sign out
             </button>
@@ -226,9 +226,9 @@ export const AdminApp: React.FC = () => {
           </p>
         )}
 
-        <div className="grid gap-4 lg:grid-cols-[13rem_1fr]">
-          <nav aria-label="Admin sections" className="lg:sticky lg:top-4 lg:self-start">
-            <ul className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[13rem_1fr]">
+          <nav aria-label="Admin sections" className="min-w-0 lg:sticky lg:top-4 lg:self-start">
+            <ul className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0">
               {visible.map((s) => {
                 const Icon = s.icon;
                 const isActive = active?.id === s.id;
@@ -238,7 +238,7 @@ export const AdminApp: React.FC = () => {
                       type="button"
                       onClick={() => setScreen(s.id)}
                       aria-current={isActive ? 'page' : undefined}
-                      className={`flex w-full items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-colors ${
+                      className={`flex min-h-10 w-full items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs font-medium transition-colors ${
                         isActive
                           ? 'bg-[#241510] text-white'
                           : 'border border-[#E8DFD8] bg-white text-[#5C4033] hover:border-[#8C766B] hover:text-[#241510] lg:border-transparent lg:bg-transparent'

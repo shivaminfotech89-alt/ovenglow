@@ -103,7 +103,7 @@ export const CouponsScreen: React.FC = () => {
                       type="button"
                       onClick={() => updateCoupon(c.id, { isActive: !c.isActive })}
                       aria-label={`${c.isActive ? 'Deactivate' : 'Activate'} ${c.code}`}
-                      className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                      className={`inline-flex min-h-9 items-center rounded-full border px-3 text-[11px] font-medium ${
                         c.isActive
                           ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                           : 'border-[#E8DFD8] bg-[#F5EFE6] text-[#8C766B]'
@@ -121,7 +121,7 @@ export const CouponsScreen: React.FC = () => {
                         deleteCoupon(c.id);
                         toast('success', `Coupon ${c.code} deleted.`);
                       }}
-                      className="rounded-md p-1 text-[#8C766B] hover:bg-rose-50 hover:text-rose-600"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#8C766B] hover:bg-rose-50 hover:text-rose-600"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

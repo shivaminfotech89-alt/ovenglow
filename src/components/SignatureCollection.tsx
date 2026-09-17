@@ -99,7 +99,7 @@ export const SignatureCollection: React.FC<SignatureCollectionProps> = ({ onOpen
                     href={getWhatsAppSupportLink(title)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#5C4033] underline decoration-[#E8DFD8] underline-offset-4 transition-colors hover:text-[#241510] hover:decoration-[#C58940]"
+                    className="inline-flex min-h-11 items-center gap-1.5 text-[11px] font-semibold text-[#5C4033] underline decoration-[#E8DFD8] underline-offset-4 transition-colors hover:text-[#241510] hover:decoration-[#C58940]"
                   >
                     <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
                     Enquire on WhatsApp

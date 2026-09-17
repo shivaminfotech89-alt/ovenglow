@@ -157,7 +157,7 @@ export const ImageField: React.FC<ImageFieldProps> = ({
                 setError(null);
                 onChange('');
               }}
-              className="inline-flex items-center gap-1 text-[#8C766B] hover:text-rose-600"
+              className="inline-flex min-h-9 items-center gap-1 text-[#8C766B] hover:text-rose-600"
             >
               <Trash2 className="h-3 w-3" /> Remove
             </button>

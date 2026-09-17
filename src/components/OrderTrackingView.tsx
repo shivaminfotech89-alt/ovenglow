@@ -236,7 +236,7 @@ export const OrderTrackingView: React.FC = () => {
             href={getWhatsAppSupportLink('Order tracking help')}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#5C4033] underline underline-offset-2 hover:text-[#241510]"
+            className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-xs font-medium text-[#5C4033] underline underline-offset-2 hover:text-[#241510]"
           >
             <MessageSquare className="h-3.5 w-3.5 text-emerald-600" /> Ask us on WhatsApp
           </a>

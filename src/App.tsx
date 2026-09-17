@@ -39,7 +39,9 @@ function AppContent() {
       <Navbar />
 
       {/* Main Dynamic View Content with mobile padding for bottom bar */}
-      <main className="flex-1 pb-16 lg:pb-0 relative overflow-hidden">
+      <main
+        className="relative flex-1 overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0"
+      >
         {/* Light atmospheric oven glow in background of hero page */}
         {activeTab === 'shop' && (
           <div 

@@ -34,14 +34,41 @@ const CATEGORY_ICONS: Record<ProductCategory, typeof Sparkles> = {
   'cheesecake-heaven': CakeSlice,
 };
 
-/** The shop's promises, in the owner's words. Emoji are decorative; the
-    label carries the meaning, so they are hidden from screen readers. */
-const OUR_PROMISE: { emoji: string; label: string }[] = [
-  { emoji: '🤎', label: 'Homemade with heart' },
-  { emoji: '🍫', label: 'Premium ingredients' },
-  { emoji: '✨', label: 'Handcrafted in small batches' },
-  { emoji: '🔥', label: 'Freshly prepared' },
-  { emoji: '🎁', label: 'Perfect for gifting & celebrations' },
+/**
+ * "Why Ovenglow Delights?" -- the shop's five promises, in the owner's words.
+ *
+ * This replaced an earlier "Our Promise" strip that made the same five points
+ * in shorter form. Two sections saying the same thing on one page reads as
+ * padding, so the richer version won and the emoji the shop chose came with it.
+ * Emoji are decorative and hidden from screen readers; the number and title
+ * carry the meaning.
+ */
+const WHY_OVENGLOW: { emoji: string; title: string; body: string }[] = [
+  {
+    emoji: '🍫',
+    title: 'Premium Ingredients',
+    body: 'We believe great desserts begin with great ingredients.',
+  },
+  {
+    emoji: '✨',
+    title: 'Small-Batch Craftsmanship',
+    body: 'Made in limited batches so every creation receives the attention it deserves.',
+  },
+  {
+    emoji: '🤎',
+    title: 'Homemade Goodness',
+    body: 'The warmth and comfort of homemade baking, elevated with premium presentation.',
+  },
+  {
+    emoji: '🔥',
+    title: 'Freshly Made',
+    body: 'Freshness isn\u2019t an option. It\u2019s part of our promise.',
+  },
+  {
+    emoji: '🎁',
+    title: 'Made for Your Moments',
+    body: 'Birthdays, anniversaries, festivals, gifting or simply \u201cI deserve something sweet.\u201d',
+  },
 ];
 
 interface ShopViewProps {
@@ -254,34 +281,51 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
         </div>
       </div>
 
-      {/* Our Promise -- sits directly under the hero so it is read before the
-          catalogue, and is the only place these promises appear on the page. */}
-      <section aria-labelledby="our-promise-heading" className="rounded-2xl sm:rounded-3xl border border-[#EADBCE] bg-[#FAF5EE] p-5 sm:p-7">
-        <div className="mb-4 flex items-center gap-2.5">
-          <Sparkles className="h-4 w-4 shrink-0 text-[#C58940]" />
+      {/* Why Ovenglow Delights -- sits directly under the hero so the reason to
+          buy is read before the catalogue, and is the only place these five
+          promises appear on the page. */}
+      <section
+        aria-labelledby="why-ovenglow-heading"
+        className="rounded-2xl border border-[#EADBCE] bg-[#FAF5EE] p-5 sm:rounded-3xl sm:p-8"
+      >
+        <div className="mb-6 max-w-2xl">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#E8DFD8] bg-white px-3 py-1 text-[11px] font-semibold text-[#5C4033]">
+            <Sparkles className="h-3.5 w-3.5 text-[#C58940]" />
+            <span>Why {storeSettings.storeName}?</span>
+          </div>
+
           <h2
-            id="our-promise-heading"
-            className="font-serif text-xl font-bold tracking-tight text-[#2A1810] sm:text-2xl"
+            id="why-ovenglow-heading"
+            className="font-serif text-2xl font-bold tracking-tight text-[#2A1810] sm:text-3xl"
           >
-            Our Promise
+            What Makes Every Bite Special?
           </h2>
         </div>
 
-        <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
-          {OUR_PROMISE.map((item) => (
+        <ol className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+          {WHY_OVENGLOW.map((item, i) => (
             <li
-              key={item.label}
-              className="flex items-center gap-3 rounded-xl border border-[#E8DFD8] bg-white p-3.5 lg:flex-col lg:items-start lg:gap-2"
+              key={item.title}
+              className="rounded-xl border border-[#E8DFD8] bg-white p-4 sm:p-5"
             >
-              <span aria-hidden="true" className="text-2xl leading-none">
-                {item.emoji}
-              </span>
-              <span className="text-xs font-medium leading-snug text-[#2A1810] sm:text-[13px]">
-                {item.label}
-              </span>
+              <div className="mb-2 flex items-center gap-2.5">
+                <span className="font-serif text-lg font-bold tabular-nums text-[#C58940]">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <span aria-hidden="true" className="text-base leading-none">
+                  {item.emoji}
+                </span>
+              </div>
+
+              <h3 className="font-serif text-base font-bold leading-tight text-[#2A1810] sm:text-lg">
+                {item.title}
+              </h3>
+              <p className="mt-1.5 text-xs leading-relaxed text-[#6B574E] sm:text-[13px]">
+                {item.body}
+              </p>
             </li>
           ))}
-        </ul>
+        </ol>
       </section>
 
       <SignatureCollection onOpenProductDetails={onOpenProductDetails} />

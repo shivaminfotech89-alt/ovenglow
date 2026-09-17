@@ -11,6 +11,10 @@ import { Product } from '../types';
  *
  * To open the shop: Admin -> Products & Inventory, click each price and stock
  * figure to set it, then publish.
+ *
+ * Four are flagged for the Signature Collection on the hero page. Their
+ * showcase names are marketing names and differ from the catalogue names on
+ * purpose; both are editable per product in the admin.
  */
 export const INITIAL_PRODUCTS: Product[] = [
   {
@@ -96,6 +100,11 @@ export const INITIAL_PRODUCTS: Product[] = [
     shelfLife: '',
     layers: [],
     flavorNotes: [],
+    signatureOrder: 3,
+    isSignature: true,
+    signatureTitle: 'The Ferrero Fantasy',
+    signatureBlurb:
+      'A decadent chocolate experience inspired by everyone\'s favourite hazelnut indulgence.',
   },
   {
     id: 'prod-brw-1',
@@ -117,6 +126,11 @@ export const INITIAL_PRODUCTS: Product[] = [
     shelfLife: '',
     layers: [],
     flavorNotes: [],
+    signatureOrder: 2,
+    isSignature: true,
+    signatureTitle: 'The Fudgy Brownie',
+    signatureBlurb:
+      'Deep chocolate. Gooey centre. Pure comfort.',
   },
   {
     id: 'prod-brw-2',
@@ -327,6 +341,11 @@ export const INITIAL_PRODUCTS: Product[] = [
     shelfLife: '',
     layers: [],
     flavorNotes: [],
+    signatureOrder: 4,
+    isSignature: true,
+    signatureTitle: 'The Celebration Cake',
+    signatureBlurb:
+      'Made for moments worth remembering.',
   },
   {
     id: 'prod-cel-4',
@@ -789,6 +808,11 @@ export const INITIAL_PRODUCTS: Product[] = [
     shelfLife: '',
     layers: [],
     flavorNotes: [],
+    signatureOrder: 1,
+    isSignature: true,
+    signatureTitle: 'The Biscoff Indulgence',
+    signatureBlurb:
+      'A luxurious Biscoff creation for those who like their cravings extra indulgent.',
   },
   {
     id: 'prod-chs-3',

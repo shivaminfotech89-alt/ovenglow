@@ -55,6 +55,19 @@ export interface Product {
   isBestseller?: boolean;
   isFestiveSpecial?: boolean;
   flavorNotes: string[];
+
+  /**
+   * Signature Collection: the handful of products shown large on the hero page.
+   *
+   * `signatureTitle` is the marketing name and is deliberately separate from
+   * `name`: the shop floor calls it "Biscoff Cheesecake" on a packing slip while
+   * the showcase calls it "The Biscoff Indulgence".
+   */
+  isSignature?: boolean;
+  signatureTitle?: string;
+  signatureBlurb?: string;
+  /** Position in the Signature Collection; lower comes first. */
+  signatureOrder?: number;
 }
 
 /** True only when a customer can actually buy it right now. */

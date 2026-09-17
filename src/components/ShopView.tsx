@@ -2,6 +2,7 @@ import React from 'react';
 import { useStore } from '../context/StoreContext';
 import { formatRupees } from '../lib/pricing';
 import { ProductCard } from './ProductCard';
+import { SignatureCollection } from './SignatureCollection';
 import { PRODUCT_CATEGORIES, Product, ProductCategory } from '../types';
 import { 
   Sparkles, 
@@ -282,6 +283,8 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
           ))}
         </ul>
       </section>
+
+      <SignatureCollection onOpenProductDetails={onOpenProductDetails} />
 
       {/* Category Filter & Active Top-Bar Search Section */}
       <div className="space-y-3">

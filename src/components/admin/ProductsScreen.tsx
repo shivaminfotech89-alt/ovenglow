@@ -37,6 +37,10 @@ const blankProduct = (): Omit<Product, 'id'> => ({
   shelfLife: '',
   layers: [],
   flavorNotes: [],
+  isSignature: false,
+  signatureTitle: '',
+  signatureBlurb: '',
+  signatureOrder: 1,
 });
 
 export const ProductsScreen: React.FC = () => {
@@ -303,6 +307,9 @@ export const ProductsScreen: React.FC = () => {
                     </button>
                     <span className="mt-0.5 block text-[10px] text-[#8C766B]">
                       {PRODUCT_CATEGORIES.find((c) => c.id === p.category)?.label}
+                      {p.isSignature && (
+                        <span className="ml-1.5 font-medium text-[#C58940]">· Signature</span>
+                      )}
                     </span>
                   </td>
                   <td className="px-3 py-2.5 align-top font-mono text-[11px] text-[#5C4033]">{p.sku}</td>
@@ -548,6 +555,55 @@ export const ProductsScreen: React.FC = () => {
               />
               Bestseller
             </label>
+          </div>
+
+          {/* Signature Collection */}
+          <div className="space-y-3 rounded-lg border border-[#E8DFD8] bg-[#FAF7F2] p-3">
+            <label className="flex items-center gap-2 text-xs font-medium text-[#241510]">
+              <input
+                type="checkbox"
+                checked={!!form.isSignature}
+                onChange={(e) => setForm({ ...form, isSignature: e.target.checked })}
+              />
+              Feature in the Signature Collection
+            </label>
+            <p className="text-[11px] text-[#8C766B]">
+              Shown large on the hero page under “Our Most Craved Creations”. Keep it to a handful.
+            </p>
+
+            {form.isSignature && (
+              <div className="space-y-3">
+                <Field
+                  label="Showcase name"
+                  hint="The marketing name. Leave blank to use the product name."
+                >
+                  <input
+                    value={form.signatureTitle ?? ''}
+                    onChange={(e) => setForm({ ...form, signatureTitle: e.target.value })}
+                    placeholder="The Biscoff Indulgence"
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="Position" hint="Lower numbers appear first.">
+                  <input
+                    type="number"
+                    min={1}
+                    value={form.signatureOrder ?? 1}
+                    onChange={(e) => setForm({ ...form, signatureOrder: Number(e.target.value) })}
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="Showcase line">
+                  <textarea
+                    rows={2}
+                    value={form.signatureBlurb ?? ''}
+                    onChange={(e) => setForm({ ...form, signatureBlurb: e.target.value })}
+                    placeholder="Deep chocolate. Gooey centre. Pure comfort."
+                    className={inputClass}
+                  />
+                </Field>
+              </div>
+            )}
           </div>
 
           <p className="flex items-start gap-2 rounded-lg border border-[#E8DFD8] bg-[#F5EFE6] px-3 py-2 text-[11px] text-[#5C4033]">

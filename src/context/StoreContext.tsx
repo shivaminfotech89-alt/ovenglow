@@ -284,6 +284,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // No coupon is applied until the customer enters one.
   const [activeCouponCode, setActiveCouponCode] = useState<string | null>(null);
 
+  /**
+   * Backfill marketing fields added after a shop already had its catalogue in
+   * storage. Matching on SKU and only filling fields that are absent means a
+   * shop's prices, stock and uploaded photos are left exactly as they are --
+   * bumping the storage key would have thrown that work away.
+   */
+  useEffect(() => {
+    setProducts((prev) => {
+      let changed = false;
+      const next = prev.map((stored) => {
+        if (stored.isSignature !== undefined) return stored;
+        const seed = INITIAL_PRODUCTS.find((p) => p.sku === stored.sku);
+        if (!seed?.isSignature) return stored;
+        changed = true;
+        return {
+          ...stored,
+          isSignature: seed.isSignature,
+          signatureTitle: stored.signatureTitle ?? seed.signatureTitle,
+          signatureBlurb: stored.signatureBlurb ?? seed.signatureBlurb,
+          signatureOrder: stored.signatureOrder ?? seed.signatureOrder,
+        };
+      });
+      return changed ? next : prev;
+    });
+  }, [setProducts]);
+
   /* ---------------------------------------------------------------- sync -- */
 
   const notifySync = useCallback((type: string) => {

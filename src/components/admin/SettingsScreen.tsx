@@ -93,10 +93,15 @@ export const SettingsScreen: React.FC = () => {
           </Field>
           <ImageField
             label="Logo image"
-            hint="Pick your logo from the gallery, or point at public/logo.png. Blank uses the drawn mark."
+            hint="The full badge. Used large, and as the picture when your link is shared."
             value={form.logoUrl}
             onChange={(logoUrl) => set('logoUrl', logoUrl)}
-            className="sm:col-span-2"
+          />
+          <ImageField
+            label="Small logo mark"
+            hint="A tighter crop for the header, where the badge's lettering is too small to read. Blank uses the full logo."
+            value={form.logoMarkUrl}
+            onChange={(logoMarkUrl) => set('logoMarkUrl', logoMarkUrl)}
           />
         </div>
       </section>

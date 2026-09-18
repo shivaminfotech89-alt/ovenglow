@@ -118,7 +118,13 @@ export const OvenglowLogo: React.FC<OvenglowLogoProps> = ({
   const current = SIZES[size];
   const { storeSettings } = useStore();
   const [artworkFailed, setArtworkFailed] = useState(false);
-  const useArtwork = !!storeSettings.logoUrl && !artworkFailed;
+  // Small sizes prefer the tighter monogram crop: the full badge's arched
+  // lettering is unreadable at header size and reads as noise.
+  const artworkSrc =
+    current.detail === 'simple'
+      ? storeSettings.logoMarkUrl || storeSettings.logoUrl
+      : storeSettings.logoUrl;
+  const useArtwork = !!artworkSrc && !artworkFailed;
   const label = `${storeSettings.storeName} logo`;
 
   return (
@@ -132,7 +138,7 @@ export const OvenglowLogo: React.FC<OvenglowLogoProps> = ({
       >
         {useArtwork ? (
           <img
-            src={storeSettings.logoUrl}
+            src={artworkSrc}
             alt={label}
             onError={() => setArtworkFailed(true)}
             className="h-full w-full rounded-full object-cover"

@@ -223,6 +223,12 @@ export interface StoreSettings {
    * Settings) and it replaces the drawn fallback everywhere the mark appears.
    */
   logoUrl: string;
+  /**
+   * A tighter crop of the mark for small sizes. The full badge carries arched
+   * lettering that is unreadable at header size, so the header shows just the
+   * monogram. Falls back to `logoUrl` when blank.
+   */
+  logoMarkUrl: string;
 
   // Payment
   upiId: string;

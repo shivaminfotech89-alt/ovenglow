@@ -46,6 +46,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   // Served from public/logo.png when that file exists; the drawn mark is used
   // until then, and any other URL can be set from Settings.
   logoUrl: '/logo.png',
+  logoMarkUrl: '/logo-mark.png',
 
   upiId: '',
   upiAccountName: '',

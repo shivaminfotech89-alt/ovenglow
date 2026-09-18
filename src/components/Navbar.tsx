@@ -35,8 +35,6 @@ export const Navbar: React.FC = () => {
     setActiveTab, 
     cart, 
     setIsCartOpen, 
-    isVegOnly, 
-    setIsVegOnly, 
     deliveryPincode, 
     setDeliveryPincode,
     getWhatsAppSupportLink,
@@ -89,8 +87,10 @@ export const Navbar: React.FC = () => {
         {/* Sleek Minimal Top Announcement Bar */}
         <div className="bg-[#241510] py-1.5 px-4 text-center text-[11px] font-normal text-[#E8DFD8] flex items-center justify-center gap-2 tracking-wide">
           <span>
-            Free delivery on orders over ₹
-            {storeSettings.freeDeliveryThreshold}
+            Free delivery on orders over{' '}
+            <span className="tabular-nums">
+              {formatRupees(storeSettings.freeDeliveryThreshold)}
+            </span>
           </span>
           {featuredCoupon && (
             <>
@@ -125,19 +125,27 @@ export const Navbar: React.FC = () => {
               className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7F2] hover:bg-[#F2ECE4] border border-[#E8DFD8] text-xs text-[#5C4033] transition-colors shrink-0"
             >
               <MapPin className="w-3.5 h-3.5 text-[#C58940]" />
-              <span className="text-[#8C766B] font-normal">Deliver to:</span>
-              <span className="font-medium text-[#241510] truncate max-w-[120px]">{deliveryPincode}</span>
+              {deliveryPincode ? (
+                <>
+                  <span className="font-normal text-[#8C766B]">Deliver to</span>
+                  <span className="max-w-[120px] truncate font-medium text-[#241510]">
+                    {deliveryPincode}
+                  </span>
+                </>
+              ) : (
+                <span className="font-medium text-[#241510]">Set area</span>
+              )}
             </button>
           </div>
 
           {/* Center: SHIFTED SEARCH BAR ON TOP BAR (Desktop & Tablet) */}
-          <div className="hidden md:flex flex-1 max-w-sm lg:max-w-md mx-2 relative">
+          <div className="relative mx-2 hidden min-w-[9rem] max-w-xs flex-1 md:flex xl:max-w-sm">
             <form onSubmit={handleSearchSubmit} className="w-full relative">
               <Search className="w-3.5 h-3.5 text-[#9E8B80] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 id="topbar-search-input"
-                placeholder="Search cakes, cookies, brownies..."
+                placeholder="Search the menu"
                 value={searchQuery}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -221,28 +229,12 @@ export const Navbar: React.FC = () => {
               )}
             </nav>
             
-            {/* Pure Veg Switch */}
-            <button 
-              onClick={() => setIsVegOnly(!isVegOnly)}
-              title="Filter vegetarian only"
-              className={`hidden min-h-10 sm:flex items-center gap-1.5 px-3 rounded-full text-xs transition-all border ${
-                isVegOnly 
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-medium' 
-                  : 'bg-white border-[#E8DFD8] text-[#8C766B] hover:border-[#241510]'
-              }`}
-            >
-              <div className="w-3 h-3 border border-emerald-600 rounded-xs flex items-center justify-center">
-                <div className={`w-1.5 h-1.5 rounded-full ${isVegOnly ? 'bg-emerald-600' : 'bg-transparent'}`} />
-              </div>
-              <span className="text-[11px] font-medium hidden sm:inline">Veg Only</span>
-            </button>
-
             {/* Customer Mobile Login / Profile Pill */}
             <button
               id="nav-btn-customer-account"
               onClick={() => setIsCustomerAuthOpen(true)}
               className="hidden min-h-10 sm:flex items-center gap-1.5 rounded-full border border-[#E8DFD8] bg-[#FAF7F2] px-3 text-xs text-[#241510] transition-all hover:bg-[#F2ECE4]"
-              title={customerUser ? 'Customer Account & Orders' : 'Sign in with Mobile Number'}
+              title={customerUser ? 'Your account and orders' : 'Sign in with your mobile number'}
             >
               {customerUser ? (
                 <>
@@ -261,18 +253,18 @@ export const Navbar: React.FC = () => {
               )}
             </button>
 
-            {/* WhatsApp Concierge */}
+            {/* WhatsApp */}
             <a
-              href={getWhatsAppSupportLink('Bakery Concierge')}
+              href={getWhatsAppSupportLink('Order enquiry')}
               target="_blank"
               rel="noopener noreferrer"
-              title="Concierge Support"
+              title="Message us on WhatsApp"
               className="flex h-11 w-11 items-center justify-center rounded-full text-[#25D366] transition-colors hover:bg-emerald-50"
             >
               <MessageSquare className="w-4 h-4" />
             </a>
 
-            {/* Refined Luxury Cart Trigger */}
+            {/* Cart */}
             <button
               id="nav-btn-open-cart"
               onClick={() => setIsCartOpen(true)}
@@ -301,7 +293,7 @@ export const Navbar: React.FC = () => {
             <input
               type="text"
               id="mobile-topbar-search-input"
-              placeholder="Search cakes, cookies, brownies..."
+              placeholder="Search cakes, cookies, brownies…"
               value={searchQuery}
               onChange={(e) => {
                 const val = e.target.value;

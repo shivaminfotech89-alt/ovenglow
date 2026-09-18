@@ -60,7 +60,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
             )}
 
             {product.isBestseller && (
-              <span className="bg-[#241510]/85 backdrop-blur-xs text-white text-[9px] font-medium tracking-wider uppercase px-2 py-0.5 rounded-full">
+              <span className="rounded-full bg-[#241510]/85 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-white backdrop-blur-xs">
                 Bestseller
               </span>
             )}
@@ -113,17 +113,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
         <div className="pt-2 border-t border-[#F0EAE1] flex items-center justify-between gap-1.5">
           <div className="flex flex-col">
             <div className="flex items-baseline gap-1">
-              <span className="text-sm sm:text-base font-bold text-[#241510] font-sans">
+              <span className="font-sans text-sm font-bold tabular-nums text-[#241510] sm:text-base">
                 {formatRupees(product.price)}
               </span>
               {product.originalPrice > product.price && (
-                <span className="text-[10px] sm:text-[11px] text-[#9E8B80] line-through">
+                <span className="text-[10px] tabular-nums text-[#9E8B80] line-through sm:text-[11px]">
                   {formatRupees(product.originalPrice)}
                 </span>
               )}
             </div>
             {product.originalPrice > product.price && (
-              <span className="text-[9px] font-bold text-emerald-700">
+              <span className="text-[9px] font-bold tabular-nums text-emerald-700">
                 Save {formatRupees(product.originalPrice - product.price)}
               </span>
             )}

@@ -25,7 +25,7 @@ export const ProductImage: React.FC<{
         className={`flex h-full w-full flex-col items-center justify-center gap-1.5 bg-[#F5EFE6] ${className}`}
       >
         <CakeSlice className="h-7 w-7 text-[#C58940]" aria-hidden="true" />
-        <span className="px-3 text-center text-[10px] font-medium uppercase tracking-wider text-[#A69286]">
+        <span className="px-3 text-center text-[10px] font-medium uppercase tracking-[0.12em] text-[#A69286]">
           Photo coming soon
         </span>
       </div>

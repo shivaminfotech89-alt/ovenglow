@@ -252,32 +252,36 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
               </div>
 
               {/* Price Details */}
-              <div className="space-y-1 text-xs text-[#6B574E] pt-1">
-                <div className="flex justify-between">
+              <div className="space-y-1 pt-1 text-xs tabular-nums text-[#6B574E]">
+                <div className="flex justify-between gap-3">
                   <span>Subtotal</span>
-                  <span className="text-[#241510] font-medium">{formatRupees(itemTotal)}</span>
+                  <span className="font-medium text-[#241510]">{formatRupees(itemTotal)}</span>
                 </div>
 
                 {discount > 0 && (
-                  <div className="flex justify-between text-emerald-800 font-medium">
+                  <div className="flex justify-between gap-3 font-medium text-emerald-800">
                     <span>Discount</span>
                     <span>−{formatRupees(discount)}</span>
                   </div>
                 )}
 
-                <div className="flex justify-between">
-                  <span>Fresh Delivery</span>
+                <div className="flex justify-between gap-3">
+                  <span>Delivery</span>
                   <span>
-                    {deliveryFee === 0 ? <span className="text-emerald-800 font-medium">FREE</span> : `₹${deliveryFee}`}
+                    {deliveryFee === 0 ? (
+                      <span className="font-medium text-emerald-800">Free</span>
+                    ) : (
+                      formatRupees(deliveryFee)
+                    )}
                   </span>
                 </div>
 
-                <div className="flex justify-between">
-                  <span>Bakery GST ({storeSettings.gstPercent}% included)</span>
+                <div className="flex justify-between gap-3">
+                  <span>GST ({storeSettings.gstPercent}% included)</span>
                   <span className="text-[#241510]">{formatRupees(tax)}</span>
                 </div>
 
-                <div className="pt-2 border-t border-[#F0EAE1] flex justify-between items-baseline text-sm font-bold text-[#241510]">
+                <div className="flex items-baseline justify-between gap-3 border-t border-[#F0EAE1] pt-2 text-sm font-bold text-[#241510]">
                   <span className="font-serif">Total</span>
                   <span className="text-lg font-bold text-[#241510]">{formatRupees(finalTotal)}</span>
                 </div>

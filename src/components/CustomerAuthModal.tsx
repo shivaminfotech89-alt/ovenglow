@@ -221,7 +221,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
               {/* Order history summary */}
               {myOrders.length > 0 && (
                 <div className="p-3 rounded-xl bg-[#FAF7F2] border border-[#E8DFD8] space-y-2">
-                  <span className="text-[11px] font-semibold text-[#8C766B] uppercase tracking-wider block">
+                  <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8C766B]">
                     Your Active Confection Orders ({myOrders.length})
                   </span>
                   <div className="space-y-1.5 max-h-36 overflow-y-auto">
@@ -298,7 +298,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                   />
                 </div>
                 <p className="text-[10px] text-[#8C766B] mt-1">
-                  Used by our atelier chef and courier to coordinate fresh delivery in {storeSettings.city}.
+                  Used by our kitchen and delivery rider to reach you about your order in {storeSettings.city}.
                 </p>
               </div>
 

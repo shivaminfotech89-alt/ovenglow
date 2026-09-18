@@ -59,7 +59,7 @@ const PaymentPanel: React.FC<{ order: Order }> = ({ order }) => {
 
         {storeSettings.upiId ? (
           <div className="rounded-lg border border-amber-300 bg-white px-3 py-2">
-            <span className="block text-[10px] uppercase tracking-wider text-[#8C766B]">Pay to UPI ID</span>
+            <span className="block text-[10px] uppercase tracking-[0.12em] text-[#8C766B]">Pay to UPI ID</span>
             <span className="font-mono text-sm font-semibold text-[#241510]">{storeSettings.upiId}</span>
             {storeSettings.upiAccountName && (
               <span className="mt-0.5 block text-[11px] text-[#8C766B]">{storeSettings.upiAccountName}</span>

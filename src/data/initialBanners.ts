@@ -11,7 +11,7 @@ export const INITIAL_BANNERS: Banner[] = [
     slot: 'hero',
     title: 'Delights Crafted to Crave',
     subtitle: 'Cakes, cookies, brownies and more for every occasion.',
-    buttonText: 'Explore the Atelier',
+    buttonText: 'See the menu',
     image:
       'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=1600&q=80',
     linkedCategory: 'premium-chocolate',

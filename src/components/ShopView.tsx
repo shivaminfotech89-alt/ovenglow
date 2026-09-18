@@ -2,7 +2,6 @@ import React from 'react';
 import { useStore } from '../context/StoreContext';
 import { formatRupees } from '../lib/pricing';
 import { ProductCard } from './ProductCard';
-import { SignatureCollection } from './SignatureCollection';
 import { PRODUCT_CATEGORIES, Product, ProductCategory } from '../types';
 import { 
   Sparkles, 
@@ -77,7 +76,10 @@ interface ShopViewProps {
 
 export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
   const { 
-    shopProducts, 
+    shopProducts,
+    products,
+    setActiveTab,
+
     selectedCategory, 
     setSelectedCategory, 
     searchQuery, 
@@ -328,7 +330,34 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
         </ol>
       </section>
 
-      <SignatureCollection onOpenProductDetails={onOpenProductDetails} />
+      {/* A way through to the showcase, now that it has its own page. Renders
+          only when something is actually featured. */}
+      {products.some((p) => p.isSignature) && (
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('signature');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-[#EADBCE] bg-[#FFFDFA] px-5 py-4 text-left transition-colors hover:border-[#C58940] sm:px-7 sm:py-5"
+        >
+          <span className="min-w-0">
+            <span className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[#5C4033]">
+              <Sparkles className="h-3.5 w-3.5 text-[#C58940]" />
+              Signature Collection
+            </span>
+            <span className="block font-serif text-lg font-bold tracking-tight text-[#2A1810] sm:text-xl">
+              Our Most Craved Creations
+            </span>
+            <span className="mt-0.5 block text-xs text-[#6B574E]">
+              The few we are asked for again and again.
+            </span>
+          </span>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#241510] text-white transition-transform group-hover:translate-x-0.5">
+            <ArrowRight className="h-4 w-4" />
+          </span>
+        </button>
+      )}
 
       {/* Category Filter & Active Top-Bar Search Section */}
       <div className="space-y-3">

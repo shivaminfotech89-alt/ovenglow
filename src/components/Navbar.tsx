@@ -10,18 +10,20 @@ import {
   X, 
   Store,
   ShieldCheck,
+  Sparkles,
   Phone,
   Search
 } from 'lucide-react';
 
-type MobileTabId = 'shop' | 'track' | 'account' | 'admin';
+type MobileTabId = 'shop' | 'signature' | 'track' | 'account' | 'admin';
 
 const MOBILE_TABS: {
   id: MobileTabId;
   label: string;
   icon: typeof Store;
 }[] = [
-  { id: 'shop', label: 'Shop', icon: Store },
+  { id: 'shop', label: 'Menu', icon: Store },
+  { id: 'signature', label: 'Signature', icon: Sparkles },
   { id: 'track', label: 'Track', icon: Truck },
   { id: 'account', label: 'Account', icon: Phone },
   { id: 'admin', label: 'Staff', icon: ShieldCheck },
@@ -173,6 +175,19 @@ export const Navbar: React.FC = () => {
                 }`}
               >
                 Shop
+              </button>
+
+              <button
+                id="nav-btn-signature"
+                onClick={() => setActiveTab('signature')}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium tracking-wide transition-all ${
+                  activeTab === 'signature'
+                    ? 'bg-[#241510] text-white'
+                    : 'text-[#5C4033] hover:bg-[#FAF7F2] hover:text-[#241510]'
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Signature</span>
               </button>
 
               <button

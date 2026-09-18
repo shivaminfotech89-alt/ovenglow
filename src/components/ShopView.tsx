@@ -1,6 +1,5 @@
 import React from 'react';
 import { useStore } from '../context/StoreContext';
-import { formatRupees } from '../lib/pricing';
 import { ProductCard } from './ProductCard';
 import { PRODUCT_CATEGORIES, Product, ProductCategory } from '../types';
 import { 
@@ -16,7 +15,7 @@ import {
   IceCreamCone,
   Square,
   ArrowRight,
-  ShieldCheck,
+  MessageSquare,
   X
 } from 'lucide-react';
 
@@ -79,14 +78,20 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
     shopProducts,
     products,
     setActiveTab,
+    getWhatsAppSupportLink,
 
     selectedCategory, 
     setSelectedCategory, 
     searchQuery, 
     setSearchQuery, 
     isVegOnly,
+    setIsVegOnly,
     storeSettings
   } = useStore();
+
+  // One place for the shop's address, so changing it in Settings changes it
+  // on the page.
+  const shopEmail = storeSettings.email || 'ovenglowdelights@gmail.com';
 
   const categories: { id: string; label: string; icon: typeof Sparkles }[] = [
     { id: 'all', label: 'Everything', icon: Sparkles },
@@ -128,10 +133,19 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
           className="absolute -bottom-8 left-8 sm:left-20 w-72 sm:w-96 h-40 bg-[radial-gradient(ellipse,_var(--tw-gradient-stops))] from-[#E5A93C]/10 via-[#FF9933]/5 to-transparent rounded-full blur-2xl pointer-events-none -z-10" 
         />
 
-        {/* Hero Showcase Banner - Haute Confectionery with Ambient Light Deck-Oven Glow */}
+        {/*
+          The banner.
+
+          It used to be sized by padding alone, so its height was whatever the
+          copy happened to need -- roughly square on a phone and a 3:1 letterbox
+          on a desktop, with the content stranded in the left third and half the
+          panel left empty. A minimum height per breakpoint fixes the shape, the
+          content column is capped so lines stay a readable length, and the
+          oven artwork now fills the space the copy does not.
+        */}
         <div 
           id="hero-showcase-banner"
-          className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#1C0E08] via-[#2A140B] to-[#120704] text-white border border-[#48281B] shadow-[0_20px_50px_-15px_rgba(229,169,60,0.18),0_0_35px_-5px_rgba(255,122,24,0.12)] p-6 sm:p-10 md:p-12"
+          className="relative flex min-h-[21rem] items-center overflow-hidden rounded-3xl border border-[#48281B] bg-gradient-to-br from-[#1C0E08] via-[#2A140B] to-[#120704] p-6 text-white shadow-[0_20px_50px_-15px_rgba(229,169,60,0.18),0_0_35px_-5px_rgba(255,122,24,0.12)] sm:min-h-[24rem] sm:p-10 lg:min-h-[27rem] lg:p-14"
         >
           {/* ========================================================= */}
           {/* LIGHT OVEN GLOW BACKGROUND LAYERS */}
@@ -161,7 +175,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
           {/* 4. Artistic Deck-Oven Hearth Silhouette in the Background (Right side) */}
           <div 
             aria-hidden="true"
-            className="absolute right-0 sm:right-6 md:right-12 bottom-0 w-64 sm:w-80 md:w-96 h-56 sm:h-72 pointer-events-none select-none opacity-45 md:opacity-65 transition-opacity"
+            className="pointer-events-none absolute bottom-0 right-0 h-56 w-64 select-none opacity-40 transition-opacity sm:right-4 sm:h-72 sm:w-80 md:right-8 md:h-80 md:w-[26rem] md:opacity-60 lg:right-10 lg:h-[21rem] lg:w-[32rem]"
           >
             {/* Deck Oven Arched Hearth Graphic */}
             <svg viewBox="0 0 320 240" className="w-full h-full" fill="none">
@@ -240,44 +254,57 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
             </div>
           </div>
 
-          {/* 5. Subtle Top-Right Oven Temperature Indicator */}
-          <div className="hidden sm:inline-flex items-center gap-2 absolute top-6 right-8 px-3.5 py-1.5 rounded-full bg-[#241510]/70 backdrop-blur-md border border-[#E5A93C]/30 text-[#E5A93C] text-[11px] font-medium shadow-sm z-10 select-none">
-            <span className="w-2 h-2 rounded-full bg-[#FF7A18] animate-pulse shadow-[0_0_8px_#FF7A18]" />
-            <span>Baked fresh daily</span>
-          </div>
+          {/* Hero content.
 
-          {/* Left Hero Content */}
-          <div className="relative z-10 max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#E5A93C] text-[11px] font-semibold tracking-wider uppercase">
-              <Sparkles className="w-3.5 h-3.5 text-[#E5A93C]" />
-              <span>Baked with Love • Crafted for Delight • {storeSettings.city}</span>
-            </div>
-
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold text-white tracking-tight leading-[1.08]">
-              Delights <br className="hidden sm:inline" />
-              <span className="italic font-normal text-[#E5A93C]">Crafted to Crave</span>
-            </h1>
-
-            <p className="text-[#D4C5B9] text-xs sm:text-sm md:text-base font-normal leading-relaxed max-w-xl">
-              Cakes, cookies, brownies, cupcakes, muffins and cheesecakes — baked fresh for every occasion, and delivered across {storeSettings.city}.
+              Capped at max-w-xl so the paragraph stays near sixty characters a
+              line; anything wider and the eye loses its place returning to the
+              left edge. */}
+          <div className="relative z-10 w-full max-w-xl">
+            {/* One eyebrow, not two. The freshness claim used to live in a pill
+                floating in the empty top-right corner, which left it attached
+                to nothing; the city and the claim belong in the same breath. */}
+            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#E5A93C] backdrop-blur-md sm:text-[11px]">
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF7A18] shadow-[0_0_8px_#FF7A18]"
+              />
+              <span>Baked fresh daily in {storeSettings.city}</span>
             </p>
 
-            {/* Quick Action Buttons */}
-            <div className="pt-2 flex flex-wrap items-center gap-3">
+            {/* Two deliberate lines rather than a `br` hidden below the sm
+                breakpoint, which left the phone layout to break wherever the
+                text happened to run out of room. */}
+            <h1 className="mt-4 font-serif text-[2rem] font-bold leading-[1.04] tracking-tight text-white sm:mt-5 sm:text-5xl lg:text-[3.5rem]">
+              <span className="block">Delights</span>
+              <span className="block italic font-normal text-[#E5A93C]">Crafted to Crave</span>
+            </h1>
+
+            <p className="mt-4 max-w-lg text-sm leading-relaxed text-[#D4C5B9] sm:mt-5 sm:text-base">
+              Cakes, cookies, brownies, cupcakes, muffins and cheesecakes, baked fresh
+              to order and delivered across {storeSettings.city}.
+            </p>
+
+            <div className="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:items-center">
               <button
+                type="button"
                 onClick={() => {
                   document.getElementById('product-catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="px-6 py-3 bg-[#E5A93C] hover:bg-[#D99A2B] text-[#241510] font-bold rounded-full shadow-md text-xs sm:text-sm flex items-center gap-2 transition-all active:scale-95"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#E5A93C] px-6 text-sm font-bold text-[#241510] shadow-md transition-colors hover:bg-[#D99A2B] active:scale-[0.98]"
               >
-                <span>Explore the Menu</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>See the menu</span>
+                <ArrowRight className="h-4 w-4" />
               </button>
 
-              <div className="flex items-center gap-2 px-4 py-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 text-xs font-medium text-[#E8DFD8]">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Free delivery over {formatRupees(storeSettings.freeDeliveryThreshold)}</span>
-              </div>
+              <a
+                href={getWhatsAppSupportLink('Order enquiry')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/20 px-6 text-sm font-semibold text-white transition-colors hover:border-white/40 hover:bg-white/5"
+              >
+                <MessageSquare className="h-4 w-4 text-emerald-400" />
+                <span>Order on WhatsApp</span>
+              </a>
             </div>
           </div>
         </div>
@@ -293,7 +320,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
         <div className="mb-6 max-w-2xl">
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#E8DFD8] bg-white px-3 py-1 text-[11px] font-semibold text-[#5C4033]">
             <Sparkles className="h-3.5 w-3.5 text-[#C58940]" />
-            <span>Why {storeSettings.storeName}?</span>
+            <span>Why {storeSettings.storeName}</span>
           </div>
 
           <h2
@@ -342,7 +369,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
           className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-[#EADBCE] bg-[#FFFDFA] px-5 py-4 text-left transition-colors hover:border-[#C58940] sm:px-7 sm:py-5"
         >
           <span className="min-w-0">
-            <span className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[#5C4033]">
+            <span className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#5C4033]">
               <Sparkles className="h-3.5 w-3.5 text-[#C58940]" />
               Signature Collection
             </span>
@@ -363,6 +390,29 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
       <div className="space-y-3">
         {/* Categories Pill Navigation */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <button
+            type="button"
+            onClick={() => setIsVegOnly(!isVegOnly)}
+            aria-pressed={isVegOnly}
+            className={`flex min-h-10 shrink-0 select-none items-center gap-1.5 rounded-full border px-3.5 text-xs font-medium transition-all ${
+              isVegOnly
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                : 'border-[#E8DFD8] bg-white text-[#5C4033] hover:border-[#2A1810] hover:text-[#2A1810]'
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className="flex h-3 w-3 items-center justify-center rounded-xs border border-emerald-600"
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${isVegOnly ? 'bg-emerald-600' : 'bg-transparent'}`}
+              />
+            </span>
+            <span>Eggless only</span>
+          </button>
+
+          <span aria-hidden="true" className="h-5 w-px shrink-0 bg-[#E8DFD8]" />
+
           {categories.map((cat) => {
             const Icon = cat.icon;
             const isSelected = selectedCategory === cat.id;
@@ -410,16 +460,12 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
       {/* Product Grid */}
       <div id="product-catalog-grid">
         <div className="flex items-center justify-between mb-3 sm:mb-4 px-0.5">
-          <span className="text-xs font-medium text-[#8C766B]">
+          <span className="text-xs font-medium tabular-nums text-[#8C766B]">
             Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'}
+            {isVegOnly && ', eggless only'}
           </span>
 
-          {isVegOnly && (
-            <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-600" />
-              100% Eggless Only
-            </span>
-          )}
+
         </div>
 
         {filteredProducts.length === 0 ? (
@@ -447,7 +493,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
               }}
               className="mt-2 min-h-10 px-5 rounded-full bg-[#2A1810] text-white font-medium text-xs shadow-sm hover:bg-[#3D2317]"
             >
-              Reset Filters
+              Reset filters
             </button>
           </div>
         ) : (
@@ -482,10 +528,10 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
           </p>
         </div>
 
-        {/* Only the factual tile remains here; the promises themselves live in
-            the Our Promise section above rather than being said twice. The
-            FSSAI tile appears only once a real licence number is on file --
-            claiming certification without one is a claim we cannot back. */}
+        {/* The promises themselves are made once, in "Why Ovenglow Delights?"
+            above. What is left here is a fact: the FSSAI tile appears only once
+            a real licence number is on file, because claiming certification
+            without one is a claim the shop cannot back. */}
         <div className="pt-1">
           {storeSettings.fssaiLicense ? (
             <div className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-[#E8DFD8] bg-white px-4 py-2.5">
@@ -509,15 +555,15 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
         {/* Direct Owner Inquiries */}
         <div className="pt-2 border-t border-[#E8DFD8] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <div className="text-[#8C766B]">
-            <span>Corporate gifting or bespoke tasting box? Direct atelier email: </span>
-            <strong className="font-mono text-[#2A1810] font-semibold">ovenglowdelights@gmail.com</strong>
+            <span>Planning a large order or corporate gifting? Write to us at </span>
+            <strong className="font-mono font-semibold text-[#2A1810]">{shopEmail}</strong>
           </div>
 
           <a
-            href="mailto:ovenglowdelights@gmail.com?subject=Custom%20Ovenglow%20Gifting%20Inquiry"
+            href={`mailto:${shopEmail}?subject=${encodeURIComponent('Bulk order enquiry')}`}
             className="inline-flex min-h-11 items-center gap-1.5 font-bold text-[#2A1810] transition-colors hover:text-[#C58940]"
           >
-            <span>Request Bespoke Tasting Box</span>
+            <span>Send an enquiry</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </a>
         </div>

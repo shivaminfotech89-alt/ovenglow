@@ -101,7 +101,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
           <div>
             {/* Category & Badge */}
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-[11px] uppercase font-medium text-[#8C766B] tracking-wider capitalize">
+              <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#8C766B]">
                 {product.category.replace('-', ' ')}
               </span>
               {product.isBestseller && (
@@ -134,7 +134,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
 
             {/* Pricing */}
             <div className="flex items-baseline gap-2.5 mt-3">
-              <span className="text-2xl font-bold font-sans text-[#241510]">{formatRupees(product.price)}</span>
+              <span className="font-sans text-2xl font-bold tabular-nums text-[#241510]">{formatRupees(product.price)}</span>
               {product.originalPrice > product.price && (
                 <span className="text-[#9E8B80] line-through text-sm">{formatRupees(product.originalPrice)}</span>
               )}

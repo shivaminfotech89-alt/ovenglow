@@ -22,7 +22,7 @@ export const SignatureView: React.FC<SignatureViewProps> = ({ onOpenProductDetai
   return (
     <div className="mx-auto w-full max-w-7xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
       <header className="mx-auto max-w-2xl space-y-3 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#E8DFD8] bg-white px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#5C4033]">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#E8DFD8] bg-white px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#5C4033]">
           <Sparkles className="h-3.5 w-3.5 text-[#C58940]" />
           <span>Signature Collection</span>
         </div>

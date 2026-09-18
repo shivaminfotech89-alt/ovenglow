@@ -40,7 +40,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   phone: '9824704877',
   whatsappNumber: '9824704877',
   email: 'ovenglowdelights@gmail.com',
-  operatingHours: '10:00 AM – 11:00 PM (Daily Fresh Baking)',
+  operatingHours: '10:00 AM – 11:00 PM, daily',
   fssaiLicense: '',
   gstin: '',
   // Served from public/logo.png when that file exists; the drawn mark is used

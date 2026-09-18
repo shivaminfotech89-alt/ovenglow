@@ -233,17 +233,24 @@ export const OvenglowLogo: React.FC<OvenglowLogoProps> = ({
       </div>
 
       {showSubtitle && (
+        /*
+          The wordmark is set in Cinzel, the same face as the lettering inside
+          the badge, so the two halves of the lockup read as one mark. It used
+          to be the UI sans at its heaviest weight with negative tracking, which
+          put a squeezed grotesque next to an engraved serif and ran OVENGLOW
+          and DELIGHTS into each other. Cinzel is a capitals face and wants a
+          little air between letters rather than less.
+        */
         <div className="flex min-w-0 flex-col">
           <span
-            className={`whitespace-nowrap font-black uppercase leading-tight tracking-tighter text-[#4A2C2A] transition-colors group-hover:text-[#FF9933] ${current.textSize}`}
+            className={`whitespace-nowrap font-display font-bold uppercase leading-tight tracking-[0.04em] text-[#4A2C2A] transition-colors group-hover:text-[#8B3A1E] ${current.textSize}`}
           >
             {storeSettings.storeName}
           </span>
           <span
-            className={`hidden min-w-0 items-center gap-1.5 font-black uppercase tracking-[0.2em] text-[#A68A78] sm:flex ${current.subSize}`}
+            className={`hidden min-w-0 truncate font-semibold uppercase leading-tight tracking-[0.22em] text-[#A68A78] sm:block ${current.subSize}`}
           >
-            <span className="truncate">{storeSettings.tagline}</span>
-            <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#25D366]" />
+            {storeSettings.tagline}
           </span>
         </div>
       )}

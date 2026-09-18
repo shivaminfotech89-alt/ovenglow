@@ -39,10 +39,11 @@ function AppContent() {
       {/* Sticky Global Navigation */}
       <Navbar />
 
-      {/* Main Dynamic View Content with mobile padding for bottom bar */}
-      <main
-        className="relative flex-1 overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0"
-      >
+      {/* The clearance for the fixed mobile tab bar belongs on the footer, the
+          last thing on the page, not here: with it on main the bar still sat
+          over the footer's final row, and a 56px gap opened above the footer
+          for no reason. */}
+      <main className="relative flex-1 overflow-hidden">
         {/* Light atmospheric oven glow in background of hero page */}
         {activeTab === 'shop' && (
           <div 

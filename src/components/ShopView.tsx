@@ -315,41 +315,41 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
           promises appear on the page. */}
       <section
         aria-labelledby="why-ovenglow-heading"
-        className="rounded-2xl border border-[#EADBCE] bg-[#FAF5EE] p-5 sm:rounded-3xl sm:p-8"
+        className="rounded-2xl border border-[#EADBCE] bg-[#FAF5EE] p-4 sm:rounded-3xl sm:p-6"
       >
-        <div className="mb-6 max-w-2xl">
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#E8DFD8] bg-white px-3 py-1 text-[11px] font-semibold text-[#5C4033]">
-            <Sparkles className="h-3.5 w-3.5 text-[#C58940]" />
+        <div className="mb-3.5 max-w-2xl sm:mb-4">
+          <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full border border-[#E8DFD8] bg-white px-2.5 py-0.5 text-[10px] font-semibold text-[#5C4033]">
+            <Sparkles className="h-3 w-3 text-[#C58940]" />
             <span>Why {storeSettings.storeName}</span>
           </div>
 
           <h2
             id="why-ovenglow-heading"
-            className="font-serif text-2xl font-bold tracking-tight text-[#2A1810] sm:text-3xl"
+            className="font-serif text-lg font-bold tracking-tight text-[#2A1810] sm:text-xl lg:text-2xl"
           >
             What Makes Every Bite Special?
           </h2>
         </div>
 
-        <ol className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+        {/* The number, the emoji and the title share a line. They used to take
+            two rows each, which ran the block to 876px on a phone -- taller
+            than the screen -- for five short promises. */}
+        <ol className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5 lg:grid-cols-3">
           {WHY_OVENGLOW.map((item, i) => (
             <li
               key={item.title}
-              className="rounded-xl border border-[#E8DFD8] bg-white p-4 sm:p-5"
+              className="rounded-lg border border-[#E8DFD8] bg-white px-3.5 py-3 sm:rounded-xl"
             >
-              <div className="mb-2 flex items-center gap-2.5">
-                <span className="font-serif text-lg font-bold tabular-nums text-[#C58940]">
+              <h3 className="flex items-baseline gap-1.5 font-serif text-sm font-bold leading-tight text-[#2A1810]">
+                <span className="shrink-0 text-[11px] font-bold tabular-nums text-[#C58940]">
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <span aria-hidden="true" className="text-base leading-none">
+                <span aria-hidden="true" className="shrink-0 text-xs leading-none">
                   {item.emoji}
                 </span>
-              </div>
-
-              <h3 className="font-serif text-base font-bold leading-tight text-[#2A1810] sm:text-lg">
-                {item.title}
+                <span className="min-w-0">{item.title}</span>
               </h3>
-              <p className="mt-1.5 text-xs leading-relaxed text-[#6B574E] sm:text-[13px]">
+              <p className="mt-1 text-[11px] leading-relaxed text-[#6B574E]">
                 {item.body}
               </p>
             </li>

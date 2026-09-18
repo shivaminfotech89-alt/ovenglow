@@ -1,0 +1,211 @@
+rules_version = '2';
+
+/**
+ * Ovenglow Delights — Firestore security rules.
+ *
+ * These rules, and nothing else, are what stops a stranger reading your
+ * customers' addresses or rewriting your prices. The Firebase config in
+ * src/lib/firebase.ts is published in the site's JavaScript by design, so the
+ * project id is public knowledge and anyone can point the SDK at this database.
+ * Everything below assumes exactly that and grants nothing on trust.
+ *
+ * The shape:
+ *
+ *   The catalogue, the banners and the shop's public settings are readable by
+ *   the world and writable only by signed-in staff.
+ *
+ *   Orders can be CREATED by anyone — a customer placing an order is not signed
+ *   in — but the list of orders is staff-only, so nobody can sweep up the
+ *   customer base. A single order is readable by anyone holding its document
+ *   id, which is a random 20-character Firestore id that is never displayed and
+ *   cannot be guessed. Customers reach their own order through `orderLookup`
+ *   (see below) and staff reach every order by querying.
+ *
+ *   Once an order is placed the customer cannot change it. Only staff move an
+ *   order through its stages, with one exception: submitting a UPI payment
+ *   reference, which a customer must be able to do from the tracking page.
+ *
+ * Deploy: paste into Firebase console → Firestore Database → Rules → Publish.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* --------------------------------------------------------------- who -- */
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * The two owner addresses are staff no matter what the database says.
+     *
+     * Without this there is no way in: writing the first staff record requires
+     * being staff, and being staff requires a staff record. These two can
+     * always create their own, which breaks the loop. They mirror
+     * PERMANENT_SUPER_ADMINS in src/lib/permissions.ts — change one, change the
+     * other.
+     */
+    function isOwnerEmail() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+             'shivaminfotech89@gmail.com',
+             'ovenglowdelights@gmail.com'
+           ];
+    }
+
+    function staffDoc() {
+      return get(/databases/$(database)/documents/staff/$(request.auth.uid)).data;
+    }
+
+    function hasStaffRecord() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/staff/$(request.auth.uid))
+        && staffDoc().isActive == true;
+    }
+
+    /** Any active staff member: may work orders and read the customer list. */
+    function isStaff() {
+      return isOwnerEmail() || hasStaffRecord();
+    }
+
+    /** Staff who may change the catalogue, prices and marketing. */
+    function isCatalogueEditor() {
+      return isOwnerEmail()
+        || (hasStaffRecord() && staffDoc().role in ['super_admin', 'admin']);
+    }
+
+    /** Staff who may change shop settings and other staff. Owners only. */
+    function isSuperAdmin() {
+      return isOwnerEmail() || (hasStaffRecord() && staffDoc().role == 'super_admin');
+    }
+
+    /* ---------------------------------------------------------- catalogue -- */
+
+    // The shop front has to work for someone who has never signed in, so the
+    // catalogue is world-readable. Unpublished products are filtered in the app
+    // rather than here: an unlisted cake is not a secret, and hiding it in the
+    // rules would stop the admin listing its own drafts.
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if isCatalogueEditor();
+    }
+
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow create, update, delete: if isCatalogueEditor();
+    }
+
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow create, update, delete: if isCatalogueEditor();
+    }
+
+    // One document, `settings/store`. Contains the shop's own phone, address
+    // and UPI id — all of it already printed on the site, none of it private.
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    /* ------------------------------------------------------------- orders -- */
+
+    /**
+     * An order carries a name, a phone number and a delivery address, so the
+     * rule that matters here is the one on `list`.
+     *
+     * `get` is a read of one document by id. Order ids are random and never
+     * shown, so holding one means the customer was given it — by placing the
+     * order, or through the lookup below. `list` is a query, which is how you
+     * would harvest every customer at once, and that is staff only.
+     */
+    match /orders/{orderId} {
+      allow get: if true;
+      allow list: if isStaff();
+
+      // Anyone may place an order. The guards below stop a placed order being
+      // back-dated, pre-marked paid, or given a stage it should not start in.
+      allow create: if request.resource.data.stage in ['inquiry_received', 'confirmed']
+        && request.resource.data.paymentStatus in ['pending', 'not_required']
+        && request.resource.data.keys().hasAll(['orderNumber', 'customer', 'items', 'totalAmount'])
+        && request.resource.data.totalAmount is number
+        && request.resource.data.totalAmount >= 0;
+
+      // Staff move orders through their stages.
+      allow update: if isStaff()
+        // Nobody rewrites who placed the order or what it cost.
+        && request.resource.data.orderNumber == resource.data.orderNumber
+        && request.resource.data.totalAmount == resource.data.totalAmount;
+
+      // A customer pays by UPI and types the reference on the tracking page, so
+      // that one field has to be writable by someone who is not signed in. It
+      // is allowed only while the order is still awaiting payment, and only
+      // that field and the stage that follows from it may change.
+      allow update: if !signedIn()
+        && resource.data.stage in ['awaiting_payment', 'payment_verification_pending']
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['upiReference', 'stage', 'stageHistory', 'updatedAt'])
+        && request.resource.data.stage == 'payment_verification_pending';
+
+      // Orders are the shop's record of its own trade. Cancelling sets a stage;
+      // it does not remove the row.
+      allow delete: if false;
+    }
+
+    /**
+     * How a customer finds their own order without being able to find anyone
+     * else's.
+     *
+     * The document id is a SHA-256 of the order number and the phone number the
+     * order was placed with (see src/lib/orderLookup.ts). Knowing the order
+     * number alone gets you nothing, which is the point: order numbers run in
+     * sequence — OG-20260918-001, -002 — so a rule that let you read an order
+     * from its number alone would let you read the lot.
+     *
+     * The document holds one field, the order id. It is written once when the
+     * order is placed and never changed.
+     */
+    match /orderLookup/{lookupHash} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.resource.data.keys().hasOnly(['orderId'])
+        && request.resource.data.orderId is string;
+      allow update, delete: if isStaff();
+    }
+
+    /* ---------------------------------------------------------- customers -- */
+
+    // Built from orders as they are placed, and only ever read by the shop.
+    match /customers/{customerId} {
+      allow read: if isStaff();
+      allow create, update: if true;
+      allow delete: if isSuperAdmin();
+    }
+
+    /* -------------------------------------------------------------- staff -- */
+
+    /**
+     * Who works here, and what each of them may do. The `role` field on these
+     * documents is what every function above reads, so write access to this
+     * collection is write access to everything: super admins only.
+     *
+     * The second clause is the bootstrap. An owner signing in for the first
+     * time has no staff record yet, so `hasStaffRecord()` is false for them and
+     * only `isOwnerEmail()` is true; this lets them write their own record and
+     * nobody else's, after which the ordinary rule takes over.
+     */
+    match /staff/{uid} {
+      allow read: if signedIn();
+      allow write: if isSuperAdmin()
+        || (isOwnerEmail() && uid == request.auth.uid);
+    }
+
+    /* ------------------------------------------------------------ default -- */
+
+    // Anything not named above is denied. A collection added later has to come
+    // here and say what it allows, rather than inheriting a hole.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

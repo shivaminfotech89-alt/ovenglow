@@ -8,6 +8,7 @@ import { StoreProvider, useStore } from './context/StoreContext';
 import { Navbar } from './components/Navbar';
 import { ShopView } from './components/ShopView';
 import { OrderTrackingView } from './components/OrderTrackingView';
+import { SignatureView } from './components/SignatureView';
 import { AdminApp } from './components/admin/AdminApp';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
@@ -67,6 +68,10 @@ function AppContent() {
 
         {activeTab === 'shop' && (
           <ShopView onOpenProductDetails={(prod) => setSelectedProductForModal(prod)} />
+        )}
+
+        {activeTab === 'signature' && (
+          <SignatureView onOpenProductDetails={(prod) => setSelectedProductForModal(prod)} />
         )}
 
         {activeTab === 'track' && (

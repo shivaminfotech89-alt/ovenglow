@@ -115,6 +115,9 @@ const STORAGE_KEYS = {
 
 export type Result = { success: boolean; message: string };
 
+/** The storefront's top-level views. */
+export type AppTab = 'shop' | 'signature' | 'track' | 'admin';
+
 /** State that mirrors itself into localStorage on every change. */
 function usePersistentState<T>(key: string, fallback: T, onError?: (message: string) => void) {
   const [value, setValue] = useState<T>(() => {
@@ -196,8 +199,8 @@ interface StoreContextType {
   deleteBanner: (id: string) => void;
 
   // Storefront view state
-  activeTab: 'shop' | 'track' | 'admin';
-  setActiveTab: (tab: 'shop' | 'track' | 'admin') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   selectedCategory: string;
   setSelectedCategory: (cat: string) => void;
   searchQuery: string;
@@ -274,7 +277,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     null,
   );
 
-  const [activeTab, setActiveTab] = useState<'shop' | 'track' | 'admin'>('shop');
+  const [activeTab, setActiveTab] = useState<AppTab>('shop');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isVegOnly, setIsVegOnly] = useState<boolean>(false);

@@ -7,6 +7,8 @@ import { formatRupees } from '../lib/pricing';
 
 interface SignatureCollectionProps {
   onOpenProductDetails: (product: Product) => void;
+  /** The dedicated page carries its own title, so it turns this one off. */
+  showHeading?: boolean;
 }
 
 /**
@@ -22,7 +24,10 @@ interface SignatureCollectionProps {
  * The section renders nothing when nothing is flagged, so it cannot leave an
  * empty band on the page.
  */
-export const SignatureCollection: React.FC<SignatureCollectionProps> = ({ onOpenProductDetails }) => {
+export const SignatureCollection: React.FC<SignatureCollectionProps> = ({
+  onOpenProductDetails,
+  showHeading = true,
+}) => {
   const { products, getWhatsAppSupportLink } = useStore();
 
   const signatures = products
@@ -32,9 +37,15 @@ export const SignatureCollection: React.FC<SignatureCollectionProps> = ({ onOpen
 
   return (
     <section
-      aria-labelledby="signature-collection-heading"
-      className="rounded-2xl border border-[#EADBCE] bg-[#FFFDFA] p-5 sm:rounded-3xl sm:p-8"
+      aria-labelledby={showHeading ? 'signature-collection-heading' : undefined}
+      aria-label={showHeading ? undefined : 'Our Most Craved Creations'}
+      className={
+        showHeading
+          ? 'rounded-2xl border border-[#EADBCE] bg-[#FFFDFA] p-5 sm:rounded-3xl sm:p-8'
+          : ''
+      }
     >
+      {showHeading && (
       <div className="mb-6 max-w-2xl">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#E8DFD8] bg-white px-3 py-1 text-[11px] font-semibold text-[#5C4033]">
           <Sparkles className="h-3.5 w-3.5 text-[#C58940]" />
@@ -48,6 +59,7 @@ export const SignatureCollection: React.FC<SignatureCollectionProps> = ({ onOpen
           Our Most Craved Creations
         </h2>
       </div>
+      )}
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {signatures.map((product) => {

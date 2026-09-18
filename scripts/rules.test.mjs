@@ -28,6 +28,48 @@ import {
 } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
 
+/**
+ * An order exactly as createOrder() in StoreContext builds one.
+ *
+ * The first version of this file invented its own order shape, which meant the
+ * rules and the fixtures agreed with each other and neither agreed with the
+ * app: the rules were guarding a `paymentStatus` field that does not exist on
+ * the Order type, and every assertion passed regardless. Fixtures mirror the
+ * real type now, and the field names below are load-bearing.
+ */
+function newOrder(overrides = {}) {
+  const now = '2026-09-18T12:00:00.000Z';
+  return {
+    orderNumber: 'OG-20260918-002',
+    customer: {
+      name: 'B Customer',
+      phone: '9812345678',
+      address: '4 Another Road',
+      city: 'Ahmedabad',
+      state: 'Gujarat',
+      pincode: '380054',
+      enableWhatsAppUpdates: true,
+    },
+    items: [],
+    itemTotal: 500,
+    discount: 0,
+    couponCode: null,
+    deliveryFee: 0,
+    tax: 25,
+    totalAmount: 500,
+    paymentMethod: 'UPI',
+    payment: { method: 'UPI' },
+    stage: 'inquiry_received',
+    createdAt: now,
+    updatedAt: now,
+    deliveryPartner: { name: 'Ovenglow Delivery', phone: '9824704877', vehicleNumber: 'Own rider' },
+    estimatedDeliveryTime: '30 - 45 Minutes',
+    deliveryOtp: '123456',
+    stageHistory: [{ stage: 'inquiry_received', at: now, by: 'system', note: 'Order received.' }],
+    ...overrides,
+  };
+}
+
 const OWNER = 'shivaminfotech89@gmail.com';
 
 const env = await initializeTestEnvironment({
@@ -99,16 +141,11 @@ await env.withSecurityRulesDisabled(async (ctx) => {
     role: 'admin',
     isActive: false,
   });
-  await setDoc(doc(db, 'orders/secret-order-id'), {
-    orderNumber: 'OG-20260918-001',
-    customer: { name: 'A Customer', phone: '9876543210', address: '12 Some Road' },
-    items: [],
-    totalAmount: 750,
-    stage: 'awaiting_payment',
-    paymentStatus: 'pending',
-  });
+  await setDoc(
+    doc(db, 'orders/secret-order-id'),
+    newOrder({ orderNumber: 'OG-20260918-001', totalAmount: 750, stage: 'awaiting_payment' }),
+  );
   await setDoc(doc(db, 'orderLookup/hash-of-number-and-phone'), { orderId: 'secret-order-id' });
-  await setDoc(doc(db, 'customers/c1'), { phone: '9876543210', name: 'A Customer' });
 });
 
 section('A stranger, not signed in');
@@ -123,46 +160,57 @@ await check('CANNOT add a product', () =>
 await check('CANNOT change the shop settings', () =>
   assertFails(updateDoc(doc(stranger, 'settings/store'), { upiId: 'attacker@upi' })));
 await check('can place an order', () =>
-  assertSucceeds(
-    addDoc(collection(stranger, 'orders'), {
-      orderNumber: 'OG-20260918-002',
-      customer: { name: 'B', phone: '9', address: 'x' },
-      items: [],
-      totalAmount: 500,
-      stage: 'inquiry_received',
-      paymentStatus: 'pending',
-    }),
-  ));
+  assertSucceeds(addDoc(collection(stranger, 'orders'), newOrder())));
 await check('CANNOT place an order already marked paid', () =>
   assertFails(
-    addDoc(collection(stranger, 'orders'), {
-      orderNumber: 'OG-20260918-003',
-      customer: { name: 'B', phone: '9', address: 'x' },
-      items: [],
-      totalAmount: 500,
-      stage: 'paid',
-      paymentStatus: 'paid',
-    }),
-  ));
+    addDoc(collection(stranger, 'orders'), newOrder({ stage: 'paid' }))));
+await check('CANNOT place an order that claims its payment was verified', () =>
+  assertFails(
+    addDoc(
+      collection(stranger, 'orders'),
+      newOrder({ payment: { method: 'UPI', verifiedBy: 'owner@x.com', verifiedAt: 'now' } }),
+    )));
+await check('CANNOT place an order missing the customer', () =>
+  assertFails(
+    addDoc(collection(stranger, 'orders'), { orderNumber: 'X', stage: 'inquiry_received' })));
 await check('CANNOT list every order', () =>
   assertFails(getDocs(collection(stranger, 'orders'))));
-await check('CANNOT list the customer base', () =>
+await check('CANNOT reach an invented customers collection', () =>
   assertFails(getDocs(collection(stranger, 'customers'))));
-await check('CANNOT read a customer record', () =>
-  assertFails(getDoc(doc(stranger, 'customers/c1'))));
 await check('CANNOT search order numbers', () =>
   assertFails(getDocs(collection(stranger, 'orderLookup'))));
 await check('can read one order by its unguessable id', () =>
   assertSucceeds(getDoc(doc(stranger, 'orders/secret-order-id'))));
 await check('can look an order up with number AND phone', () =>
   assertSucceeds(getDoc(doc(stranger, 'orderLookup/hash-of-number-and-phone'))));
+// Mirrors submitUpiReference(): it replaces the whole `payment` object, so the
+// affected key Firestore reports is `payment`, not `payment.upiReference`.
 await check('can submit a UPI reference on their own order', () =>
   assertSucceeds(
     updateDoc(doc(stranger, 'orders/secret-order-id'), {
-      upiReference: '123456789012',
+      payment: { method: 'UPI', upiReference: '123456789012', submittedAt: 'now' },
       stage: 'payment_verification_pending',
       stageHistory: [],
       updatedAt: 'now',
+    }),
+  ));
+await check('CANNOT verify their own payment while submitting it', () =>
+  assertFails(
+    updateDoc(doc(stranger, 'orders/secret-order-id'), {
+      payment: { method: 'UPI', upiReference: '1', verifiedBy: 'me', verifiedAt: 'now' },
+      stage: 'payment_verification_pending',
+      stageHistory: [],
+      updatedAt: 'now',
+    }),
+  ));
+await check('CANNOT smuggle an address change in with the reference', () =>
+  assertFails(
+    updateDoc(doc(stranger, 'orders/secret-order-id'), {
+      payment: { method: 'UPI', upiReference: '1' },
+      stage: 'payment_verification_pending',
+      stageHistory: [],
+      updatedAt: 'now',
+      customer: { name: 'Someone else', phone: '1', address: 'elsewhere' },
     }),
   ));
 await check('CANNOT mark their own order delivered', () =>
@@ -243,8 +291,6 @@ await check('can move an order along', () =>
       orderNumber: 'OG-20260918-001',
       totalAmount: 750,
     })));
-await check('can read customers', () =>
-  assertSucceeds(getDoc(doc(manager, 'customers/c1'))));
 await check('CANNOT change a price', () =>
   assertFails(updateDoc(doc(manager, 'products/p1'), { price: 1 })));
 await check('CANNOT change the shop settings', () =>

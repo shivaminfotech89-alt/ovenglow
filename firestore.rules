@@ -123,13 +123,18 @@ service cloud.firestore {
       allow get: if true;
       allow list: if isStaff();
 
-      // Anyone may place an order. The guards below stop a placed order being
-      // back-dated, pre-marked paid, or given a stage it should not start in.
-      allow create: if request.resource.data.stage in ['inquiry_received', 'confirmed']
-        && request.resource.data.paymentStatus in ['pending', 'not_required']
-        && request.resource.data.keys().hasAll(['orderNumber', 'customer', 'items', 'totalAmount'])
+      // Anyone may place an order, because a customer at checkout is not
+      // signed in. The guards stop one arriving already advanced: every real
+      // order starts at `inquiry_received` (see createOrder), and nothing a
+      // customer submits may claim a payment has been verified.
+      allow create: if request.resource.data.stage == 'inquiry_received'
+        && request.resource.data.keys().hasAll([
+             'orderNumber', 'customer', 'items', 'totalAmount', 'payment', 'stage'
+           ])
         && request.resource.data.totalAmount is number
-        && request.resource.data.totalAmount >= 0;
+        && request.resource.data.totalAmount >= 0
+        && !('verifiedBy' in request.resource.data.payment)
+        && !('verifiedAt' in request.resource.data.payment);
 
       // Staff move orders through their stages.
       allow update: if isStaff()
@@ -144,8 +149,14 @@ service cloud.firestore {
       allow update: if !signedIn()
         && resource.data.stage in ['awaiting_payment', 'payment_verification_pending']
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['upiReference', 'stage', 'stageHistory', 'updatedAt'])
-        && request.resource.data.stage == 'payment_verification_pending';
+             .hasOnly(['payment', 'stage', 'stageHistory', 'updatedAt'])
+        && request.resource.data.stage == 'payment_verification_pending'
+        // Submitting a reference is a claim that money was sent. Confirming it
+        // arrived is the shop's to make.
+        && !('verifiedBy' in request.resource.data.payment)
+        && !('verifiedAt' in request.resource.data.payment)
+        && request.resource.data.orderNumber == resource.data.orderNumber
+        && request.resource.data.totalAmount == resource.data.totalAmount;
 
       // Orders are the shop's record of its own trade. Cancelling sets a stage;
       // it does not remove the row.
@@ -171,15 +182,6 @@ service cloud.firestore {
       allow create: if request.resource.data.keys().hasOnly(['orderId'])
         && request.resource.data.orderId is string;
       allow update, delete: if isStaff();
-    }
-
-    /* ---------------------------------------------------------- customers -- */
-
-    // Built from orders as they are placed, and only ever read by the shop.
-    match /customers/{customerId} {
-      allow read: if isStaff();
-      allow create, update: if true;
-      allow delete: if isSuperAdmin();
     }
 
     /* -------------------------------------------------------------- staff -- */

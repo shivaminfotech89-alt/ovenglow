@@ -1,6 +1,9 @@
 import { OrderStage } from './lib/orderStages';
 import { StaffRole } from './lib/permissions';
 
+/** What a mutation did, and what to tell the person who asked for it. */
+export type Result = { success: boolean; message: string };
+
 export type ProductCategory =
   | 'premium-chocolate'
   | 'brownie-indulgence'

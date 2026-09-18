@@ -67,50 +67,81 @@ const SCREENS: ScreenDef[] = [
 /* ------------------------------------------------------------- login -- */
 
 const AdminLogin: React.FC = () => {
-  const { loginAsStaff, staff, storeSettings } = useStore();
+  const { loginAsStaff, sendStaffPasswordReset, storeSettings } = useStore();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = loginAsStaff(email);
-    if (!res.success) setError(res.message);
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const res = await loginAsStaff(email, password);
+    setBusy(false);
+    // On success the auth listener swaps this screen out; there is nothing to
+    // do here but clear the password from memory.
+    if (res.success) setPassword('');
+    else setError(res.message);
+  };
+
+  const forgot = async () => {
+    setBusy(true);
+    const res = await sendStaffPasswordReset(email);
+    setBusy(false);
+    setError(res.success ? null : res.message);
+    setNotice(res.success ? res.message : null);
   };
 
   return (
-    <div className="mx-auto w-full max-w-lg px-4 py-12 sm:py-20">
+    <div className="mx-auto w-full max-w-md px-4 py-12 sm:py-20">
       <div className="space-y-6 rounded-3xl border border-[#E8DFD8] bg-white p-6 shadow-lg sm:p-9">
         <div className="space-y-2 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#241510] text-[#E5A93C]">
             <ShieldCheck className="h-6 w-6" />
           </div>
-          <h2 className="font-serif text-2xl font-bold text-[#241510]">Ovenglow Staff Sign In</h2>
+          <h2 className="font-serif text-2xl font-bold text-[#241510]">Staff sign in</h2>
           <p className="text-xs text-[#8C766B]">
             {storeSettings.storeName} · {storeSettings.city}
           </p>
         </div>
 
-        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-900">
-          <AlertCircle className="mt-px h-4 w-4 shrink-0" />
-          <p>
-            <b>This is not real authentication.</b> There is no server yet, so any email in the staff
-            list signs in without a password and roles only hide buttons. Do not put live customer
-            data in here until the backend is built.
-          </p>
-        </div>
-
+        {/*
+          What used to be here: a banner admitting there was no authentication,
+          and below it every staff email printed as a button that signed you in
+          on one click. Both are gone -- Firebase checks the password now, and
+          the account list is not something a sign-in screen should publish.
+        */}
         <form onSubmit={submit} className="space-y-3">
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-[#5C4033]">Registered staff email</span>
+            <span className="mb-1 block text-xs font-medium text-[#5C4033]">Email</span>
             <input
               type="email"
               required
+              autoComplete="username"
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
                 setError(null);
               }}
-              placeholder="you@ovenglow.in"
+              placeholder="you@example.com"
+              className={inputClass}
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[#5C4033]">Password</span>
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError(null);
+              }}
               className={inputClass}
             />
           </label>
@@ -120,33 +151,104 @@ const AdminLogin: React.FC = () => {
               {error}
             </p>
           )}
+          {notice && (
+            <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+              {notice}
+            </p>
+          )}
 
-          <button type="submit" className={`${btnPrimary} w-full py-2.5`}>
-            Sign in
+          <button type="submit" disabled={busy} className={`${btnPrimary} w-full py-2.5 disabled:opacity-60`}>
+            {busy ? 'Signing in…' : 'Sign in'}
+          </button>
+
+          <button
+            type="button"
+            onClick={forgot}
+            disabled={busy || !email.trim()}
+            className="mx-auto block min-h-9 text-[11px] text-[#8C766B] underline decoration-[#E8DFD8] underline-offset-2 hover:text-[#241510] disabled:opacity-50"
+          >
+            Forgotten your password?
           </button>
         </form>
+      </div>
+    </div>
+  );
+};
 
-        <div className="border-t border-[#E8DFD8] pt-4">
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[#8C766B]">
-            Registered accounts
+/* ------------------------------------------------- email verification -- */
+
+/**
+ * The one hurdle between an owner and their own admin.
+ *
+ * The security rules grant the two owner addresses their powers only once the
+ * address is verified, and an account created by hand in the Firebase console
+ * starts unverified. Without this screen that arrives as "Missing or
+ * insufficient permissions" on every action, with nothing to click.
+ */
+const VerifyEmail: React.FC = () => {
+  const { resendVerification, recheckVerification, logoutStaff } = useStore();
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <div className="mx-auto w-full max-w-md px-4 py-12 sm:py-20">
+      <div className="space-y-5 rounded-3xl border border-[#E8DFD8] bg-white p-6 text-center shadow-lg sm:p-9">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-800">
+          <AlertCircle className="h-6 w-6" />
+        </div>
+        <h2 className="font-serif text-xl font-bold text-[#241510]">Confirm your email first</h2>
+        <p className="text-xs leading-relaxed text-[#6B574E]">
+          We have sent a link to your address. Click it, then come back and choose
+          “I have clicked the link”. This is what proves the address is yours, and it is
+          only needed once.
+        </p>
+
+        {notice && (
+          <p className="rounded-lg border border-[#E8DFD8] bg-[#FAF7F2] px-3 py-2 text-xs text-[#5C4033]">
+            {notice}
           </p>
-          <ul className="space-y-1.5">
-            {staff.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-2 text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => setEmail(s.email)}
-                  className="inline-flex min-h-9 items-center truncate font-mono text-[#5C4033] underline decoration-[#E8DFD8] underline-offset-2 hover:text-[#241510]"
-                >
-                  {s.email}
-                </button>
-                <span className={`shrink-0 ${s.isActive ? 'text-[#8C766B]' : 'text-rose-600'}`}>
-                  {ROLE_LABELS[s.role]}
-                  {!s.isActive && ' · inactive'}
-                </span>
-              </li>
-            ))}
-          </ul>
+        )}
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              const ok = await recheckVerification();
+              setBusy(false);
+              setNotice(
+                ok
+                  ? 'Thank you — opening the console.'
+                  : 'Not confirmed yet. Check your inbox, and your spam folder.',
+              );
+            }}
+            className={`${btnPrimary} w-full py-2.5 disabled:opacity-60`}
+          >
+            I have clicked the link
+          </button>
+
+          <button
+            type="button"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              const res = await resendVerification();
+              setBusy(false);
+              setNotice(res.message);
+            }}
+            className="min-h-9 w-full text-[11px] text-[#8C766B] underline decoration-[#E8DFD8] underline-offset-2 hover:text-[#241510]"
+          >
+            Send the link again
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void logoutStaff()}
+            className="min-h-9 w-full text-[11px] text-[#8C766B] hover:text-[#241510]"
+          >
+            Sign out
+          </button>
         </div>
       </div>
     </div>
@@ -156,10 +258,30 @@ const AdminLogin: React.FC = () => {
 /* ------------------------------------------------------------- shell -- */
 
 export const AdminApp: React.FC = () => {
-  const { currentStaff, logoutStaff, hasPermission, orders, storageWarning } = useStore();
+  const { currentStaff, logoutStaff, hasPermission, orders, storageWarning, authReady, needsEmailVerification } =
+    useStore();
   const storageUsed = localStorageBytesUsed();
   const storagePct = Math.min(100, Math.round((storageUsed / STORAGE_BUDGET_BYTES) * 100));
   const [screen, setScreen] = useState<ScreenId>('dashboard');
+
+  // Firebase restores a session asynchronously. Rendering the login screen
+  // before that settles makes a signed-in admin watch it flash past on every
+  // page load, and invites them to type a password they did not need.
+  if (!authReady) {
+    return (
+      <div className="mx-auto w-full max-w-md px-4 py-20 text-center text-xs text-[#8C766B]">
+        Checking your sign-in…
+      </div>
+    );
+  }
+
+  if (needsEmailVerification && !currentStaff) {
+    return (
+      <ToastHost>
+        <VerifyEmail />
+      </ToastHost>
+    );
+  }
 
   if (!currentStaff) {
     return (
@@ -200,7 +322,7 @@ export const AdminApp: React.FC = () => {
             )}
             <button
               type="button"
-              onClick={logoutStaff}
+              onClick={() => void logoutStaff()}
               className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#E8DFD8] px-3 text-xs font-medium text-[#5C4033] transition-colors hover:border-[#8C766B] hover:text-[#241510]"
             >
               <LogOut className="h-3.5 w-3.5" /> Sign out

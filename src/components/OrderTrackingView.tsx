@@ -4,6 +4,7 @@ import { Order } from '../types';
 import { STAGES, getStageTrack } from '../lib/orderStages';
 import { formatRupees } from '../lib/pricing';
 import {
+  Phone,
   Search,
   Truck,
   CheckCircle2,
@@ -74,9 +75,9 @@ const PaymentPanel: React.FC<{ order: Order }> = ({ order }) => {
         <p className="text-[11px] leading-relaxed text-amber-900">{storeSettings.paymentInstructions}</p>
 
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            const res = submitUpiReference(order.id, reference);
+            const res = await submitUpiReference(order.id, reference);
             setFeedback({ ok: res.success, message: res.message });
             if (res.success) setReference('');
           }}
@@ -131,28 +132,25 @@ const PaymentPanel: React.FC<{ order: Order }> = ({ order }) => {
 
 export const OrderTrackingView: React.FC = () => {
   const {
-    orders,
     customerUser,
-    activeTrackingId,
-    setActiveTrackingId,
-    getOrderById,
+    trackedOrder,
+    findOrder,
+    isFindingOrder,
     getWhatsAppSupportLink,
     storeSettings,
   } = useStore();
 
-  const [query, setQuery] = useState(activeTrackingId ?? '');
-  const [searched, setSearched] = useState(false);
+  const [query, setQuery] = useState('');
+  // Pre-filled for a returning customer: they are proving they know the number,
+  // and making them retype their own mobile every time helps nobody.
+  const [phone, setPhone] = useState(customerUser?.phone ?? '');
+  const [notFound, setNotFound] = useState<string | null>(null);
   const [copiedOtp, setCopiedOtp] = useState(false);
 
-  // Only ever the order that was actually asked for. The previous version fell
-  // back to orders[0], which showed a stranger's name, address and handover PIN
-  // to anyone who typed a wrong number.
-  const currentOrder = query.trim() ? getOrderById(query) : undefined;
-
-  // A signed-in customer sees their own orders as shortcuts — never the whole shop's.
-  const myOrders = customerUser
-    ? orders.filter((o) => o.customer.phone.replace(/\D/g, '') === customerUser.phone)
-    : [];
+  // Whatever findOrder last retrieved, and nothing else. An earlier version
+  // fell back to orders[0] when a lookup missed, handing a stranger's name,
+  // address and handover PIN to anyone who typed a wrong number.
+  const currentOrder = trackedOrder ?? undefined;
 
   const track = currentOrder ? getStageTrack(currentOrder) : [];
   const currentIndex = currentOrder ? track.indexOf(currentOrder.stage) : -1;
@@ -169,68 +167,81 @@ export const OrderTrackingView: React.FC = () => {
           Track your order
         </h2>
         <p className="text-xs text-[#6B574E] sm:text-sm">
-          Enter your order number or the mobile number you ordered with.
+          Your order number and the mobile number you ordered with.
         </p>
 
+        {/*
+          Both halves are required, and that is the point. Order numbers run in
+          sequence, so a page that opened an order from its number alone would
+          let anyone read every customer's address by counting upwards. Asking
+          for the phone number too means a lookup only works for the person who
+          placed the order.
+        */}
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            setSearched(true);
-            const found = getOrderById(query);
-            if (found) setActiveTrackingId(found.orderNumber);
+            setNotFound(null);
+            const res = await findOrder(query, phone);
+            if (!res.success) setNotFound(res.message);
           }}
-          className="mx-auto flex max-w-md gap-2 pt-1"
+          className="mx-auto max-w-md space-y-2 pt-1 text-left"
         >
-          <div className="relative flex-1">
+          <div className="relative">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8C766B]" />
             <input
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                setSearched(false);
+                setNotFound(null);
               }}
-              placeholder="OG-20260910-001 or your mobile number"
+              placeholder="Order number, e.g. OG-20260910-001"
+              aria-label="Order number"
               className="w-full rounded-full border border-[#E8DFD8] bg-white py-2.5 pl-10 pr-4 text-xs text-[#241510] placeholder:text-[#A69286] focus:border-[#241510] focus:outline-none"
             />
           </div>
+
+          <div className="relative">
+            <Phone className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8C766B]" />
+            <input
+              value={phone}
+              inputMode="numeric"
+              autoComplete="tel"
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setNotFound(null);
+              }}
+              placeholder="Mobile number you ordered with"
+              aria-label="Mobile number"
+              className="w-full rounded-full border border-[#E8DFD8] bg-white py-2.5 pl-10 pr-4 text-xs text-[#241510] placeholder:text-[#A69286] focus:border-[#241510] focus:outline-none"
+            />
+          </div>
+
           <button
             type="submit"
-            className="shrink-0 rounded-full bg-[#241510] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#3D2317]"
+            disabled={isFindingOrder}
+            className="w-full rounded-full bg-[#241510] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#3D2317] disabled:opacity-60"
           >
-            Track
+            {isFindingOrder ? 'Looking…' : 'Track my order'}
           </button>
-        </form>
 
-        {myOrders.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-1.5 pt-1">
-            {myOrders.slice(0, 4).map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => {
-                  setQuery(o.orderNumber);
-                  setActiveTrackingId(o.orderNumber);
-                  setSearched(true);
-                }}
-                className="rounded-full border border-[#E8DFD8] bg-white px-2.5 py-1 font-mono text-[11px] text-[#5C4033] hover:border-[#C58940] hover:text-[#241510]"
-              >
-                {o.orderNumber}
-              </button>
-            ))}
-          </div>
-        )}
+          {notFound && (
+            <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-center text-[11px] text-rose-700">
+              {notFound}
+            </p>
+          )}
+        </form>
       </div>
 
       {!currentOrder ? (
         <div className="mx-auto max-w-md rounded-2xl border border-[#E8DFD8] bg-white p-8 text-center shadow-xs">
           <PackageSearch className="mx-auto mb-2 h-10 w-10 text-[#8C766B] opacity-60" />
           <h4 className="font-serif text-base font-bold text-[#241510]">
-            {searched && query.trim() ? 'No order found' : 'Enter your order number'}
+            {notFound ? 'No order found' : 'Enter your order details'}
           </h4>
           <p className="mt-1 text-xs text-[#8C766B]">
-            {searched && query.trim()
-              ? 'We could not find an order with that number or mobile. Check the number on your confirmation, or message us and we will look it up.'
-              : 'Your order number was shown when you checked out and starts with OG-.'}
+            {notFound
+              ? 'Check both the order number and the mobile number on your confirmation, or message us and we will look it up.'
+              : 'Your order number was shown when you checked out and starts with OG-. We ask for your mobile number too, so that nobody else can open your order.'}
           </p>
           <a
             href={getWhatsAppSupportLink('Order tracking help')}

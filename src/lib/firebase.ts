@@ -1,5 +1,5 @@
 import { FirebaseApp, initializeApp } from 'firebase/app';
-import { Firestore, getFirestore } from 'firebase/firestore';
+import { Firestore, connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 
 /**
  * The Firebase connection.
@@ -44,6 +44,24 @@ export const app: FirebaseApp = initializeApp(firebaseConfig);
 
 export const db: Firestore = getFirestore(app);
 
+/**
+ * Point at the local emulator instead of the real project.
+ *
+ * Set VITE_USE_EMULATOR=1 to develop, or to test, against a throwaway database
+ * -- the same one `npm run rules:test` checks the security rules with. It keeps
+ * experiments out of the live shop, and it is the only way to exercise a
+ * checkout end to end without booking a real order.
+ *
+ * Never on in a deployed build: the flag has to be set explicitly, and Vercel
+ * does not set it.
+ */
+export const USING_EMULATOR = env.VITE_USE_EMULATOR === '1';
+
+if (USING_EMULATOR) {
+  connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  console.info('Firestore: using the local emulator, not the live project.');
+}
+
 /** Useful in error messages, so a misconfigured deploy says which project it reached. */
 export const PROJECT_ID = firebaseConfig.projectId;
 
@@ -60,7 +78,7 @@ export const PROJECT_ID = firebaseConfig.projectId;
  * is swallowed: nobody's cake order should depend on a pageview being counted.
  */
 export function startAnalytics(): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || USING_EMULATOR) return;
 
   void import('firebase/analytics')
     .then(async ({ getAnalytics, isSupported }) => {

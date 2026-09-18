@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import { formatRupees } from '../lib/pricing';
-import { STAGES } from '../lib/orderStages';
 import { 
   X, 
   Phone, 
@@ -33,9 +31,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
     loginWithMobile, 
     logoutCustomer, 
     updateCustomerProfile,
-    orders,
     setActiveTab,
-    setActiveTrackingId,
     storeSettings
   } = useStore();
 
@@ -48,10 +44,6 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Filter orders placed by this customer (if logged in)
-  const myOrders = customerUser 
-    ? orders.filter(o => o.customer.phone.replace(/\D/g, '').includes(customerUser.phone))
-    : [];
 
   const handleDirectLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,36 +210,28 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                 )}
               </div>
 
-              {/* Order history summary */}
-              {myOrders.length > 0 && (
-                <div className="p-3 rounded-xl bg-[#FAF7F2] border border-[#E8DFD8] space-y-2">
-                  <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8C766B]">
-                    Your Active Confection Orders ({myOrders.length})
-                  </span>
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                    {myOrders.map((ord) => (
-                      <div 
-                        key={ord.id}
-                        onClick={() => {
-                          setActiveTrackingId(ord.orderNumber);
-                          setActiveTab('track');
-                          onClose();
-                        }}
-                        className="flex items-center justify-between p-2 rounded-lg bg-white border border-[#E8DFD8] hover:border-[#C58940] cursor-pointer transition-colors text-xs"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Package className="w-3.5 h-3.5 text-[#C58940]" />
-                          <span className="font-mono font-bold text-[#241510]">{ord.orderNumber}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FAF7F2] text-[#5C4033]">
-                            {STAGES[ord.stage].label}
-                          </span>
-                        </div>
-                        <span className="font-bold text-[#241510]">{formatRupees(ord.totalAmount)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/*
+                This used to list the customer's past orders, read out of the
+                shared order array that every browser held a copy of. Listing
+                orders is now staff-only -- that array is what let anyone read
+                anyone's address -- and a phone number typed into this box is
+                not proof of anything, so it cannot be the key to an order
+                history. Tracking asks for the order number as well.
+              */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('track');
+                  onClose();
+                }}
+                className="flex w-full items-center justify-between gap-2 rounded-xl border border-[#E8DFD8] bg-[#FAF7F2] p-3 text-left text-xs transition-colors hover:border-[#C58940]"
+              >
+                <span className="flex items-center gap-2">
+                  <Package className="h-3.5 w-3.5 text-[#C58940]" />
+                  <span className="font-medium text-[#241510]">Track an order</span>
+                </span>
+                <span className="text-[10px] text-[#8C766B]">Order number + this mobile</span>
+              </button>
 
               {/* Actions */}
               <div className="flex gap-2">

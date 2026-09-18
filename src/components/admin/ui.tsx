@@ -96,10 +96,12 @@ export const StageBadge: React.FC<{ stage: OrderStage; className?: string }> = (
 interface InlineEditProps {
   value: number;
   /**
-   * Returns an error message to refuse the edit. The field then snaps back to
-   * the stored value, so the screen never shows a number that was not saved.
+   * Returns an error message to refuse the edit, or null to accept it. The
+   * field snaps back to the stored value on a refusal, so the screen never
+   * shows a number that was not saved -- which now means waiting for the
+   * database to answer rather than deciding locally.
    */
-  onSave: (next: number) => string | null;
+  onSave: (next: number) => Promise<string | null> | string | null;
   prefix?: string;
   suffix?: string;
   /** Group digits for display (Indian grouping). Editing always shows the raw number. */
@@ -133,7 +135,7 @@ export const InlineEditNumber: React.FC<InlineEditProps> = ({
     if (!editing) setDraft(String(value));
   }, [value, editing]);
 
-  const commit = () => {
+  const commit = async () => {
     const next = Number(draft);
     if (!Number.isFinite(next)) {
       setDraft(String(value));
@@ -141,14 +143,17 @@ export const InlineEditNumber: React.FC<InlineEditProps> = ({
       setEditing(false);
       return;
     }
-    const refusal = onSave(next);
+    // Leave edit mode straight away: the value shown is already the one being
+    // saved, and holding the field open until the server answers makes every
+    // edit feel slow.
+    setEditing(false);
+    const refusal = await onSave(next);
     if (refusal) {
       setDraft(String(value)); // snap back
       setError(refusal);
     } else {
       setError(null);
     }
-    setEditing(false);
   };
 
   const cancel = () => {
@@ -181,7 +186,7 @@ export const InlineEditNumber: React.FC<InlineEditProps> = ({
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            commit();
+            void commit();
           }
           if (e.key === 'Escape') {
             e.preventDefault();

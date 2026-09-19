@@ -1,6 +1,7 @@
 import React from 'react';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
+import { FssaiMark } from './FssaiMark';
 import { PRODUCT_CATEGORIES, Product, ProductCategory } from '../types';
 import { 
   Sparkles, 
@@ -532,15 +533,9 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
             above. What is left here is a fact: the FSSAI tile appears only once
             a real licence number is on file, because claiming certification
             without one is a claim the shop cannot back. */}
-        <div className="pt-1">
-          {storeSettings.fssaiLicense ? (
-            <div className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-[#E8DFD8] bg-white px-4 py-2.5">
-              <span className="font-serif text-sm font-bold text-[#2A1810]">FSSAI Licensed</span>
-              <span className="font-mono text-[11px] text-[#8C766B]">
-                Lic. {storeSettings.fssaiLicense}
-              </span>
-            </div>
-          ) : (
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <FssaiMark />
+          {!storeSettings.fssaiLicense && (
             <div className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-[#E8DFD8] bg-white px-4 py-2.5">
               <span className="font-serif text-sm font-bold text-[#2A1810]">Order on WhatsApp</span>
               <span className="text-[11px] text-[#8C766B]">

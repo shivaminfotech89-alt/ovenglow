@@ -85,8 +85,16 @@ export const SettingsScreen: React.FC = () => {
           <Field label="Operating hours" className="sm:col-span-2">
             <input value={form.operatingHours} onChange={(e) => set('operatingHours', e.target.value)} className={inputClass} />
           </Field>
-          <Field label="FSSAI licence" hint="A food business must display this.">
-            <input value={form.fssaiLicense} onChange={(e) => set('fssaiLicense', e.target.value)} className={`${inputClass} font-mono`} />
+          <Field
+            label="FSSAI licence number"
+            hint="14 digits. A food business must display this; it appears in the footer and on the shop page."
+          >
+            <input
+              value={form.fssaiLicense}
+              onChange={(e) => set('fssaiLicense', e.target.value)}
+              inputMode="numeric"
+              className={`${inputClass} font-mono tabular-nums`}
+            />
           </Field>
           <Field label="GSTIN">
             <input value={form.gstin} onChange={(e) => set('gstin', e.target.value)} className={`${inputClass} font-mono`} />
@@ -102,6 +110,12 @@ export const SettingsScreen: React.FC = () => {
             hint="A tighter crop for the header, where the badge's lettering is too small to read. Blank uses the full logo."
             value={form.logoMarkUrl}
             onChange={(logoMarkUrl) => set('logoMarkUrl', logoMarkUrl)}
+          />
+          <ImageField
+            label="FSSAI logo"
+            hint="The official emblem from fssai.gov.in. Leave blank to show the licence number on its own."
+            value={form.fssaiLogoUrl}
+            onChange={(fssaiLogoUrl) => set('fssaiLogoUrl', fssaiLogoUrl)}
           />
         </div>
       </section>

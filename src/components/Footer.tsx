@@ -1,5 +1,6 @@
 import React from 'react';
 import { OvenglowLogo } from './OvenglowLogo';
+import { FssaiMark } from './FssaiMark';
 import { useStore } from '../context/StoreContext';
 import { PRODUCT_CATEGORIES } from '../types';
 import { 
@@ -88,6 +89,10 @@ export const Footer: React.FC = () => {
               <span>Message us on WhatsApp</span>
             </a>
           </div>
+
+          {/* A licence is part of who the business is, so it sits with the name
+              and the description rather than among the order links. */}
+          <FssaiMark tone="dark" />
         </div>
 
         {/* Quick Links */}
@@ -119,13 +124,7 @@ export const Footer: React.FC = () => {
             <li><button onClick={() => setIsCustomerAuthOpen(true)} className="inline-flex min-h-9 items-center transition-colors hover:text-white">Your account</button></li>
             <li className="flex"><a href={getWhatsAppSupportLink('Bulk Corporate Gifting')} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center transition-colors hover:text-white">Corporate gifting</a></li>
             <li className="flex"><a href={getWhatsAppSupportLink('Custom Wedding Cakes')} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center transition-colors hover:text-white">Event and wedding cakes</a></li>
-            {storeSettings.fssaiLicense && (
-              <li>
-                <span className="text-[#8C766B]">
-                  FSSAI licence <span className="font-mono">{storeSettings.fssaiLicense}</span>
-                </span>
-              </li>
-            )}
+
           </ul>
         </div>
 

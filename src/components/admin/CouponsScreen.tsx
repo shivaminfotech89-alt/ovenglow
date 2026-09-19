@@ -25,9 +25,9 @@ export const CouponsScreen: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<CouponDraft>(blank());
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = addCoupon(draft);
+    const res = await addCoupon(draft);
     toast(res.success ? 'success' : 'error', res.message);
     if (res.success) {
       setOpen(false);

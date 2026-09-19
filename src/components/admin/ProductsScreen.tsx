@@ -106,9 +106,9 @@ export const ProductsScreen: React.FC = () => {
     setFormOpen(true);
   };
 
-  const saveForm = (e: React.FormEvent) => {
+  const saveForm = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = editingId ? updateProduct(editingId, form) : addProduct(form);
+    const res = await (editingId ? updateProduct(editingId, form) : addProduct(form));
     toast(res.success ? 'success' : 'error', res.message);
     if (res.success) {
       setFormOpen(false);
@@ -300,8 +300,8 @@ export const ProductsScreen: React.FC = () => {
                       value={p.stockCount}
                       groupDigits
                       disabled={!canEdit}
-                      onSave={(next) => {
-                        const res = updateProduct(p.id, { stockCount: next });
+                      onSave={async (next) => {
+                        const res = await updateProduct(p.id, { stockCount: next });
                         return res.success ? null : res.message;
                       }}
                     />
@@ -316,8 +316,8 @@ export const ProductsScreen: React.FC = () => {
                       prefix="₹"
                       groupDigits
                       disabled={!canEdit}
-                      onSave={(next) => {
-                        const res = updateProduct(p.id, { price: next });
+                      onSave={async (next) => {
+                        const res = await updateProduct(p.id, { price: next });
                         return res.success ? null : res.message;
                       }}
                     />
@@ -332,9 +332,9 @@ export const ProductsScreen: React.FC = () => {
                       prefix="₹"
                       groupDigits
                       disabled={!canEdit}
-                      onSave={(next) => {
+                      onSave={async (next) => {
                         if (next < p.price) return 'MRP cannot be below the selling price.';
-                        const res = updateProduct(p.id, { originalPrice: next });
+                        const res = await updateProduct(p.id, { originalPrice: next });
                         return res.success ? null : res.message;
                       }}
                     />
@@ -449,8 +449,8 @@ export const ProductsScreen: React.FC = () => {
                       value={p.stockCount}
                       groupDigits
                       disabled={!canEdit}
-                      onSave={(next) => {
-                        const res = updateProduct(p.id, { stockCount: next });
+                      onSave={async (next) => {
+                        const res = await updateProduct(p.id, { stockCount: next });
                         return res.success ? null : res.message;
                       }}
                     />
@@ -469,8 +469,8 @@ export const ProductsScreen: React.FC = () => {
                       prefix="₹"
                       groupDigits
                       disabled={!canEdit}
-                      onSave={(next) => {
-                        const res = updateProduct(p.id, { price: next });
+                      onSave={async (next) => {
+                        const res = await updateProduct(p.id, { price: next });
                         return res.success ? null : res.message;
                       }}
                     />
@@ -482,9 +482,9 @@ export const ProductsScreen: React.FC = () => {
                       prefix="₹"
                       groupDigits
                       disabled={!canEdit}
-                      onSave={(next) => {
+                      onSave={async (next) => {
                         if (next < p.price) return 'MRP cannot be below the selling price.';
-                        const res = updateProduct(p.id, { originalPrice: next });
+                        const res = await updateProduct(p.id, { originalPrice: next });
                         return res.success ? null : res.message;
                       }}
                     />

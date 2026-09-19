@@ -61,8 +61,8 @@ export const SignatureScreen: React.FC = () => {
     toast('success', `"${product.signatureTitle || product.name}" removed from the collection.`);
   };
 
-  const addToCollection = (product: Product) => {
-    const res = updateProduct(product.id, {
+  const addToCollection = async (product: Product) => {
+    const res = await updateProduct(product.id, {
       isSignature: true,
       signatureOrder: featured.length + 1,
       signatureTitle: product.signatureTitle || product.name,

@@ -27,14 +27,19 @@ export const StaffScreen: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<StaffRole>('order_manager');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = addStaff(name, email, role);
+    setBusy(true);
+    const res = await addStaff(name, email, role, password);
+    setBusy(false);
     toast(res.success ? 'success' : 'error', res.message);
     if (res.success) {
       setName('');
       setEmail('');
+      setPassword('');
     }
   };
 
@@ -47,18 +52,18 @@ export const StaffScreen: React.FC = () => {
         </p>
       </div>
 
-      <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-900">
-        <Lock className="mt-px h-4 w-4 shrink-0" />
+      <div className="flex items-start gap-2.5 rounded-xl border border-[#E8DFD8] bg-[#FAF7F2] p-3 text-[11px] leading-relaxed text-[#5C4033]">
+        <Lock className="mt-px h-4 w-4 shrink-0 text-emerald-700" />
         <p>
-          Roles here <b>hide and disable controls</b>. They are not enforced, because there is no
-          server to enforce them on — anyone who can edit this browser’s storage can grant themselves
-          any role. Real enforcement has to live in the database once one exists.
+          Roles are <b>enforced by the database</b>, not just hidden in this screen. An Order
+          Manager who found a way to click a Settings button would still be refused by Firestore,
+          because the security rules read the same role you set here.
         </p>
       </div>
 
       <form onSubmit={submit} className="space-y-3 rounded-2xl border border-[#E8DFD8] bg-white p-4">
         <h3 className="text-xs font-semibold text-[#241510]">Add a staff member</h3>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Full name">
             <input required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
           </Field>
@@ -80,10 +85,24 @@ export const StaffScreen: React.FC = () => {
               ))}
             </select>
           </Field>
+          <Field
+            label="Starting password"
+            hint="At least 6 characters. Tell them what you set and ask them to change it."
+          >
+            <input
+              required
+              type="password"
+              minLength={6}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
         </div>
         <p className="text-[11px] text-[#8C766B]">{ROLE_DESCRIPTIONS[role]}</p>
-        <button type="submit" className={btnPrimary}>
-          <UserPlus className="h-3.5 w-3.5" /> Add staff member
+        <button type="submit" disabled={busy} className={`${btnPrimary} disabled:opacity-60`}>
+          <UserPlus className="h-3.5 w-3.5" /> {busy ? 'Creating\u2026' : 'Add staff member'}
         </button>
       </form>
 
@@ -116,8 +135,8 @@ export const StaffScreen: React.FC = () => {
                     <select
                       value={s.role}
                       disabled={permanent}
-                      onChange={(e) => {
-                        const res = updateStaff(s.id, { role: e.target.value as StaffRole });
+                      onChange={async (e) => {
+                        const res = await updateStaff(s.id, { role: e.target.value as StaffRole });
                         toast(res.success ? 'success' : 'error', res.message);
                       }}
                       aria-label={`Role for ${s.name}`}
@@ -134,8 +153,8 @@ export const StaffScreen: React.FC = () => {
                     <button
                       type="button"
                       disabled={permanent}
-                      onClick={() => {
-                        const res = updateStaff(s.id, { isActive: !s.isActive });
+                      onClick={async () => {
+                        const res = await updateStaff(s.id, { isActive: !s.isActive });
                         toast(res.success ? 'success' : 'error', res.message);
                       }}
                       className={`rounded-full border px-2 py-0.5 text-[11px] font-medium disabled:opacity-50 ${
@@ -152,9 +171,9 @@ export const StaffScreen: React.FC = () => {
                       type="button"
                       disabled={permanent}
                       aria-label={`Remove ${s.name}`}
-                      onClick={() => {
+                      onClick={async () => {
                         if (!confirm(`Remove ${s.name}'s access?`)) return;
-                        const res = removeStaff(s.id);
+                        const res = await removeStaff(s.id);
                         toast(res.success ? 'success' : 'error', res.message);
                       }}
                       className="rounded-md p-1 text-[#8C766B] hover:bg-rose-50 hover:text-rose-600 disabled:opacity-30 disabled:hover:bg-transparent"

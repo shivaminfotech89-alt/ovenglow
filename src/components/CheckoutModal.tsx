@@ -104,9 +104,26 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
     setStep('payment');
   };
 
-  const placeOrder = () => {
+  const [placeError, setPlaceError] = useState<string | null>(null);
+
+  const placeOrder = async () => {
     setIsPlacing(true);
-    const order = createOrder(customer, paymentMethod);
+    setPlaceError(null);
+    let order;
+    try {
+      // The order goes to the database now, not to this browser. It can fail,
+      // and telling the customer their order was placed when it was not is the
+      // one outcome worth guarding hardest against.
+      order = await createOrder(customer, paymentMethod);
+    } catch (e) {
+      console.error('Could not place the order:', e);
+      setIsPlacing(false);
+      setPlaceError(
+        'We could not place your order just now. Please check your connection and try again, or message us on WhatsApp.',
+      );
+      return;
+    }
+
     setCreatedOrder(order);
     setStep('success');
     setIsPlacing(false);
@@ -318,6 +335,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
                 </div>
               )}
 
+              {placeError && (
+                <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                  {placeError}
+                </p>
+              )}
+
               <div className="flex gap-2.5">
                 <button type="button" onClick={() => setStep('details')} className="rounded-full border border-[#E8DFD8] px-4 py-2.5 text-xs font-medium text-[#5C4033] hover:bg-white">
                   Back
@@ -325,7 +348,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
                 <button
                   type="button"
                   disabled={isPlacing || cart.length === 0}
-                  onClick={placeOrder}
+                  onClick={() => void placeOrder()}
                   className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#241510] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#3D2317] disabled:opacity-50 sm:text-sm"
                 >
                   {isPlacing ? 'Placing order…' : `Place order · ${formatRupees(totals.total)}`}

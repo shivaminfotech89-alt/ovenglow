@@ -95,8 +95,8 @@ const OrderDetail: React.FC<{ order: Order; onClose: () => void }> = ({ order, o
     (stage) => stage !== 'paid' && order.stage !== 'payment_verification_pending',
   );
 
-  const move = (to: OrderStage) => {
-    const res = advanceOrderStage(order.id, to, note);
+  const move = async (to: OrderStage) => {
+    const res = await advanceOrderStage(order.id, to, note);
     toast(res.success ? 'success' : 'error', res.message);
     if (res.success) setNote('');
   };
@@ -165,8 +165,8 @@ const OrderDetail: React.FC<{ order: Order; onClose: () => void }> = ({ order, o
                 <button
                   type="button"
                   className={`${btnPrimary} flex-1 bg-rose-700 hover:bg-rose-800`}
-                  onClick={() => {
-                    const res = rejectPayment(order.id, rejectReason);
+                  onClick={async () => {
+                    const res = await rejectPayment(order.id, rejectReason);
                     toast(res.success ? 'success' : 'error', res.message);
                     if (res.success) {
                       setShowReject(false);
@@ -186,8 +186,8 @@ const OrderDetail: React.FC<{ order: Order; onClose: () => void }> = ({ order, o
               <button
                 type="button"
                 className={`${btnPrimary} flex-1 bg-emerald-700 hover:bg-emerald-800`}
-                onClick={() => {
-                  const res = verifyPayment(order.id);
+                onClick={async () => {
+                  const res = await verifyPayment(order.id);
                   toast(res.success ? 'success' : 'error', res.message);
                 }}
               >

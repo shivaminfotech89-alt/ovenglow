@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Product,
   CartItem,
@@ -12,6 +20,7 @@ import {
   Coupon,
   Banner,
   ProductCategory,
+  Result,
   isBuyable,
 } from '../types';
 import {
@@ -23,10 +32,41 @@ import {
 } from '../lib/orderStages';
 import { StaffRole, can, Permission, isPermanentSuperAdmin } from '../lib/permissions';
 import { calculateTotals, checkCoupon, OrderTotals } from '../lib/pricing';
-import { generateDeliveryOtp, generateId, generateOrderNumber } from '../lib/ids';
+import { generateDeliveryOtp, generateId } from '../lib/ids';
 import { INITIAL_PRODUCTS } from '../data/initialProducts';
 import { INITIAL_COUPONS } from '../data/initialCoupons';
 import { INITIAL_BANNERS } from '../data/initialBanners';
+import {
+  patchMany,
+  patchRecord,
+  putMany,
+  putRecord,
+  removeMany,
+  removeRecord,
+  useLiveCollection,
+  useLiveDoc,
+} from '../lib/firestoreSync';
+import {
+  User,
+  createStaffLogin,
+  refreshVerification,
+  resetStaffPassword,
+  sendVerification,
+  signInStaff,
+  signOutStaff,
+  watchStaffAuth,
+} from '../lib/staffAuth';
+import { isUsablePhone, orderLookupKey } from '../lib/orderLookup';
+import { db, startAnalytics } from '../lib/firebase';
+import {
+  collection,
+  doc,
+  getCountFromServer,
+  getDoc,
+  query,
+  setDoc,
+  where,
+} from 'firebase/firestore';
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   // Taken from the brand mark: OVENGLOW · DELIGHTS · CRAFTED TO CRAVE.
@@ -79,43 +119,106 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   youtubeUrl: '',
 };
 
-const DEFAULT_STAFF: StaffUser[] = [
-  {
-    id: 'staff-1',
-    email: 'shivaminfotech89@gmail.com',
-    name: 'Executive Administrator',
-    role: 'super_admin',
-    isActive: true,
-    addedAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'staff-2',
-    email: 'ovenglowdelights@gmail.com',
-    name: 'Executive Co-Owner',
-    role: 'super_admin',
-    isActive: true,
-    addedAt: '2026-01-01T00:00:00.000Z',
-  },
-];
 
 /**
- * v3: the catalogue moved to the nine printed ranges, so stored products carry
- * category slugs that no longer exist. Bumped rather than migrated; older data
- * is left in place and ignored.
+ * What still lives in this browser.
+ *
+ * Everything the shop and its customers must agree about -- the catalogue,
+ * orders, coupons, banners, settings, who works here -- moved to Firestore,
+ * because keeping it here is what made a customer's order invisible to the
+ * admin: each device held its own private copy of the world and nothing
+ * travelled between them.
+ *
+ * What is left is genuinely per-browser. A half-filled bag belongs to the
+ * phone it was filled on, not to the shop.
  */
 const STORAGE_KEYS = {
-  PRODUCTS: 'ovenglow_products_v3',
-  ORDERS: 'ovenglow_orders_v3',
   CART: 'ovenglow_cart_v3',
-  STAFF: 'ovenglow_staff_v3',
-  SESSION: 'ovenglow_staff_session_v3',
   CUSTOMER: 'ovenglow_customer_v3',
-  SETTINGS: 'ovenglow_settings_v3',
-  COUPONS: 'ovenglow_coupons_v3',
-  BANNERS: 'ovenglow_banners_v3',
 } as const;
 
-export type Result = { success: boolean; message: string };
+/** Firestore collection names, in one place so a typo cannot go unnoticed. */
+const COL = {
+  PRODUCTS: 'products',
+  ORDERS: 'orders',
+  COUPONS: 'coupons',
+  BANNERS: 'banners',
+  STAFF: 'staff',
+  SETTINGS: 'settings',
+  ORDER_LOOKUP: 'orderLookup',
+} as const;
+
+const SETTINGS_DOC = 'store';
+
+export type { Result };
+
+/**
+ * Turn a Firestore rejection into something a shopkeeper can act on.
+ *
+ * `permission-denied` here almost always means the sign-in expired or the
+ * account is not staff, and "Missing or insufficient permissions" tells nobody
+ * that.
+ */
+function writeFailure(e: unknown, what: string): string {
+  const code = (e as { code?: string })?.code ?? '';
+  console.error(`Could not ${what}:`, e);
+  if (code === 'permission-denied') {
+    return `Not allowed to ${what}. Sign out and in again; if it keeps happening your account may not have that permission.`;
+  }
+  if (code === 'unavailable') {
+    return `Could not reach the database, so the change was NOT saved. Check the connection and try again.`;
+  }
+  return `Could not ${what}. Please try again.`;
+}
+
+/** Firestore rejects `undefined`; the optional fields on Order are often that. */
+function stripForFirestore<T extends Record<string, unknown>>(value: T): T {
+  const out: Record<string, unknown> = {};
+  for (const [key, v] of Object.entries(value)) {
+    if (v === undefined) continue;
+    out[key] =
+      v && typeof v === 'object' && !Array.isArray(v) && (v as object).constructor === Object
+        ? stripForFirestore(v as Record<string, unknown>)
+        : v;
+  }
+  return out as T;
+}
+
+/**
+ * The next human-readable order number for today, counted in the database.
+ *
+ * generateOrderNumber() counted the orders this device could see, which was
+ * every order back when each browser held the whole shop. A customer's phone
+ * can no longer list orders at all -- deliberately -- so the count comes from a
+ * server-side aggregate instead, which needs no read permission on the rows.
+ *
+ * Two people checking out in the same second can still land on the same number.
+ * It is a label for talking to customers, not a key: the document id is what
+ * identifies an order, and that is unique by construction.
+ */
+async function nextOrderNumber(): Promise<string> {
+  const today = new Date();
+  const stamp = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, '0'),
+    String(today.getDate()).padStart(2, '0'),
+  ].join('');
+
+  try {
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+    const todaysOrders = await getCountFromServer(
+      query(collection(db, 'orders'), where('createdAt', '>=', startOfDay)),
+    );
+    return `OG-${stamp}-${String(todaysOrders.data().count + 1).padStart(3, '0')}`;
+  } catch (e) {
+    // An aggregate needs the same `list` permission a query does, which a
+    // customer does not have. Falling back to a time-based suffix keeps
+    // checkout working; the number stays unique enough to quote on WhatsApp.
+    console.warn('Could not count today\u2019s orders; using a time-based number.', e);
+    const since = today.getHours() * 3600 + today.getMinutes() * 60 + today.getSeconds();
+    return `OG-${stamp}-${String(since % 1000).padStart(3, '0')}`;
+  }
+}
 
 /** The storefront's top-level views. */
 export type AppTab = 'shop' | 'signature' | 'track' | 'admin';
@@ -157,23 +260,38 @@ interface StoreContextType {
   // Catalogue
   products: Product[];
   shopProducts: Product[];
-  addProduct: (p: Omit<Product, 'id'>) => Result;
-  updateProduct: (id: string, updates: Partial<Product>) => Result;
-  deleteProduct: (id: string) => void;
-  bulkSetPublished: (ids: string[], isPublished: boolean) => void;
-  bulkDelete: (ids: string[]) => void;
+  addProduct: (p: Omit<Product, 'id'>) => Promise<Result>;
+  updateProduct: (id: string, updates: Partial<Product>) => Promise<Result>;
+  deleteProduct: (id: string) => Promise<void>;
+  bulkSetPublished: (ids: string[], isPublished: boolean) => Promise<void>;
+  bulkDelete: (ids: string[]) => Promise<void>;
+  /** True until the catalogue has arrived from the database. */
+  productsReady: boolean;
   findDuplicateSkus: () => string[];
 
   // Orders
   orders: Order[];
-  createOrder: (customer: CustomerDetails, paymentMethod: PaymentMethod) => Order;
-  advanceOrderStage: (orderId: string, to: OrderStage, note?: string) => Result;
-  submitUpiReference: (orderId: string, reference: string) => Result;
-  verifyPayment: (orderId: string, note?: string) => Result;
-  rejectPayment: (orderId: string, reason: string) => Result;
-  getOrderById: (query: string) => Order | undefined;
-  activeTrackingId: string | null;
-  setActiveTrackingId: (id: string | null) => void;
+  /** False until the admin's order list has loaded. Empty means empty, not loading. */
+  ordersReady: boolean;
+  createOrder: (customer: CustomerDetails, paymentMethod: PaymentMethod) => Promise<Order>;
+  advanceOrderStage: (orderId: string, to: OrderStage, note?: string) => Promise<Result>;
+  submitUpiReference: (orderId: string, reference: string) => Promise<Result>;
+  verifyPayment: (orderId: string, note?: string) => Promise<Result>;
+  rejectPayment: (orderId: string, reason: string) => Promise<Result>;
+
+  /**
+   * The one order a customer is looking at on the tracking page.
+   *
+   * Staff read orders straight out of `orders`. A customer cannot: listing
+   * orders is staff-only, precisely so that nobody can walk the customer base.
+   * They reach exactly one order, by proving they know its number AND the phone
+   * it was placed with, and it arrives here.
+   */
+  trackedOrder: Order | null;
+  findOrder: (orderNumber: string, phone: string) => Promise<Result>;
+  clearTrackedOrder: () => void;
+  /** True while findOrder is waiting on the database. */
+  isFindingOrder: boolean;
 
   // Cart
   cart: CartItem[];
@@ -190,15 +308,15 @@ interface StoreContextType {
   activeCoupon: Coupon | null;
   applyCoupon: (code: string) => Result;
   removeCoupon: () => void;
-  addCoupon: (c: Omit<Coupon, 'id' | 'createdAt' | 'timesUsed'>) => Result;
-  updateCoupon: (id: string, updates: Partial<Coupon>) => void;
-  deleteCoupon: (id: string) => void;
+  addCoupon: (c: Omit<Coupon, 'id' | 'createdAt' | 'timesUsed'>) => Promise<Result>;
+  updateCoupon: (id: string, updates: Partial<Coupon>) => Promise<void>;
+  deleteCoupon: (id: string) => Promise<void>;
 
   // Banners
   banners: Banner[];
-  addBanner: (b: Omit<Banner, 'id'>) => void;
-  updateBanner: (id: string, updates: Partial<Banner>) => void;
-  deleteBanner: (id: string) => void;
+  addBanner: (b: Omit<Banner, 'id'>) => Promise<void>;
+  updateBanner: (id: string, updates: Partial<Banner>) => Promise<void>;
+  deleteBanner: (id: string) => Promise<void>;
 
   // Storefront view state
   activeTab: AppTab;
@@ -214,7 +332,7 @@ interface StoreContextType {
 
   // Settings
   storeSettings: StoreSettings;
-  updateStoreSettings: (updates: Partial<StoreSettings>) => void;
+  updateStoreSettings: (updates: Partial<StoreSettings>) => Promise<void>;
 
   // Customer session
   customerUser: CustomerUser | null;
@@ -227,14 +345,31 @@ interface StoreContextType {
   // Staff session
   staff: StaffUser[];
   currentStaff: StaffUser | null;
-  loginAsStaff: (email: string) => Result;
-  logoutStaff: () => void;
-  addStaff: (name: string, email: string, role: StaffRole) => Result;
-  updateStaff: (id: string, updates: Partial<StaffUser>) => Result;
-  removeStaff: (id: string) => Result;
+  loginAsStaff: (email: string, password: string) => Promise<Result>;
+  logoutStaff: () => Promise<void>;
+  addStaff: (name: string, email: string, role: StaffRole, password: string) => Promise<Result>;
+  updateStaff: (id: string, updates: Partial<StaffUser>) => Promise<Result>;
+  removeStaff: (id: string) => Promise<Result>;
   hasPermission: (permission: Permission) => boolean;
+  sendStaffPasswordReset: (email: string) => Promise<Result>;
 
-  /** Non-empty when the last write to browser storage failed (usually the quota). */
+  /**
+   * Sign-in is settled and we know whether anyone is signed in. The admin shows
+   * nothing until this is true, so a signed-in admin never sees the login
+   * screen flash past while Firebase restores the session.
+   */
+  authReady: boolean;
+  /**
+   * Set when the signed-in account has not confirmed its email address. The two
+   * owner addresses get their powers from the security rules only once the
+   * address is verified, so the admin has to be able to say so and offer to
+   * send the link again.
+   */
+  needsEmailVerification: boolean;
+  resendVerification: () => Promise<Result>;
+  recheckVerification: () => Promise<boolean>;
+
+  /** Non-empty when the last write to the database failed. */
   storageWarning: string;
 
   // Messaging + analytics
@@ -251,29 +386,109 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setStorageWarning((prev) => (prev === message ? prev : message));
   }, []);
 
-  const [storeSettings, setStoreSettings] = usePersistentState<StoreSettings>(
-    STORAGE_KEYS.SETTINGS,
+  /* ------------------------------------------------------ who is signed in -- */
+
+  /**
+   * Firebase owns the session now, not localStorage.
+   *
+   * The old admin kept `currentStaff` in browser storage, which meant anyone
+   * who could open devtools could type themselves a Super Admin role and the
+   * app would believe it. Firebase holds a signed token instead, and every
+   * security rule asks Firebase rather than the browser -- so editing
+   * localStorage now achieves exactly nothing.
+   */
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    startAnalytics();
+    return watchStaffAuth((user) => {
+      setAuthUser(user);
+      setAuthReady(true);
+    });
+  }, []);
+
+  const signedIn = authUser !== null;
+
+  /* ------------------------------------------------------------ live data -- */
+
+  // The catalogue, the banners, the coupons and the shop's settings are
+  // world-readable, so they load for a visitor who has never signed in. Orders
+  // and the staff list are not: subscribing to them while signed out would only
+  // earn a permission error on every page load of the public shop.
+  const productsLive = useLiveCollection<Product>(COL.PRODUCTS);
+  const couponsLive = useLiveCollection<Coupon>(COL.COUPONS);
+  const bannersLive = useLiveCollection<Banner>(COL.BANNERS);
+  const ordersLive = useLiveCollection<Order>(COL.ORDERS, signedIn);
+  const staffLive = useLiveCollection<StaffUser>(COL.STAFF, signedIn);
+  const settingsLive = useLiveDoc<StoreSettings>(
+    COL.SETTINGS,
+    SETTINGS_DOC,
     DEFAULT_STORE_SETTINGS,
-    reportStorage,
   );
-  const [products, setProducts] = usePersistentState<Product[]>(
-    STORAGE_KEYS.PRODUCTS,
-    INITIAL_PRODUCTS,
+
+  const products = productsLive.items;
+  const coupons = couponsLive.items;
+  const banners = bannersLive.items;
+  const orders = ordersLive.items;
+  const staff = staffLive.items;
+  const storeSettings = settingsLive.value;
+
+  // Surface whichever read is failing, so a rules mistake shows up in the admin
+  // rather than only in the console.
+  useEffect(() => {
+    reportStorage(
+      productsLive.error ||
+        ordersLive.error ||
+        settingsLive.error ||
+        staffLive.error ||
+        couponsLive.error ||
+        bannersLive.error ||
+        '',
+    );
+  }, [
+    productsLive.error,
+    ordersLive.error,
+    settingsLive.error,
+    staffLive.error,
+    couponsLive.error,
+    bannersLive.error,
     reportStorage,
-  );
-  const [orders, setOrders] = usePersistentState<Order[]>(STORAGE_KEYS.ORDERS, [], reportStorage);
+  ]);
+
+  /**
+   * The signed-in person as the admin understands them.
+   *
+   * Normally this is their `staff/{uid}` record. The two owner addresses are a
+   * deliberate exception: the security rules treat them as Super Admins
+   * whatever the database says, because otherwise the very first sign-in could
+   * not write the very first staff record. Mirroring that here means the admin
+   * lets them in on the same terms the database will.
+   */
+  const currentStaff = useMemo<StaffUser | null>(() => {
+    if (!authUser?.email) return null;
+    const email = authUser.email.toLowerCase();
+    const record = staff.find((s) => s.id === authUser.uid || s.email.toLowerCase() === email);
+    if (record) {
+      if (!record.isActive && !isPermanentSuperAdmin(email)) return null;
+      return isPermanentSuperAdmin(email) ? { ...record, role: 'super_admin' } : record;
+    }
+    if (!isPermanentSuperAdmin(email)) return null;
+    return {
+      id: authUser.uid,
+      email,
+      name: authUser.displayName || 'Owner',
+      role: 'super_admin',
+      isActive: true,
+      addedAt: new Date().toISOString(),
+    };
+  }, [authUser, staff]);
+
+  const needsEmailVerification = signedIn && authUser?.emailVerified === false;
+
+  /* ------------------------------------------------------ this browser only -- */
+
   const [cart, setCart] = usePersistentState<CartItem[]>(STORAGE_KEYS.CART, []);
-  const [coupons, setCoupons] = usePersistentState<Coupon[]>(STORAGE_KEYS.COUPONS, INITIAL_COUPONS);
-  const [banners, setBanners] = usePersistentState<Banner[]>(
-    STORAGE_KEYS.BANNERS,
-    INITIAL_BANNERS,
-    reportStorage,
-  );
-  const [staff, setStaff] = usePersistentState<StaffUser[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF);
-  const [currentStaff, setCurrentStaff] = usePersistentState<StaffUser | null>(
-    STORAGE_KEYS.SESSION,
-    null,
-  );
   const [customerUser, setCustomerUser] = usePersistentState<CustomerUser | null>(
     STORAGE_KEYS.CUSTOMER,
     null,
@@ -286,84 +501,65 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [deliveryPincode, setDeliveryPincode] = useState<string>('');
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [isCustomerAuthOpen, setIsCustomerAuthOpen] = useState<boolean>(false);
-  const [activeTrackingId, setActiveTrackingId] = useState<string | null>(null);
+  const [trackedOrder, setTrackedOrder] = useState<Order | null>(null);
+  const [isFindingOrder, setIsFindingOrder] = useState(false);
   // No coupon is applied until the customer enters one.
   const [activeCouponCode, setActiveCouponCode] = useState<string | null>(null);
 
   /**
-   * Backfill marketing fields added after a shop already had its catalogue in
-   * storage. Matching on SKU and only filling fields that are absent means a
-   * shop's prices, stock and uploaded photos are left exactly as they are --
-   * bumping the storage key would have thrown that work away.
+   * Put the shop on the shelves the first time an owner signs in.
+   *
+   * A brand new Firestore database is empty, and an empty catalogue means the
+   * shop front says "the menu is being set up" forever. This uploads the nine
+   * printed ranges, the starting coupons and banners, and the default settings
+   * -- once, only when a catalogue editor is signed in to be allowed to, and
+   * only into collections that are actually empty, so it can never overwrite
+   * prices the shop has since set.
    */
+  const seeded = useRef(false);
   useEffect(() => {
-    setProducts((prev) => {
-      let changed = false;
-      const next = prev.map((stored) => {
-        if (stored.isSignature !== undefined) return stored;
-        const seed = INITIAL_PRODUCTS.find((p) => p.sku === stored.sku);
-        if (!seed?.isSignature) return stored;
-        changed = true;
-        return {
-          ...stored,
-          isSignature: seed.isSignature,
-          signatureTitle: stored.signatureTitle ?? seed.signatureTitle,
-          signatureBlurb: stored.signatureBlurb ?? seed.signatureBlurb,
-          signatureOrder: stored.signatureOrder ?? seed.signatureOrder,
-        };
-      });
-      return changed ? next : prev;
-    });
-  }, [setProducts]);
-
-  /* ---------------------------------------------------------------- sync -- */
-
-  const notifySync = useCallback((type: string) => {
-    try {
-      const channel = new BroadcastChannel('ovenglow_sync_channel');
-      channel.postMessage({ type, at: Date.now() });
-      channel.close();
-    } catch {
-      // BroadcastChannel is unavailable; other tabs pick changes up on reload.
+    if (seeded.current) return;
+    if (!currentStaff || !can(currentStaff.role, 'products.edit')) return;
+    // `ready` distinguishes "empty" from "not loaded yet". Seeding on the
+    // latter would duplicate the entire catalogue.
+    if (!productsLive.ready || !couponsLive.ready || !bannersLive.ready || !settingsLive.ready) {
+      return;
     }
-  }, []);
+    seeded.current = true;
 
-  useEffect(() => {
-    let channel: BroadcastChannel | null = null;
-    const reload = <T,>(key: string, setter: (v: T) => void) => {
+    void (async () => {
       try {
-        const saved = localStorage.getItem(key);
-        if (saved) setter(JSON.parse(saved) as T);
-      } catch {
-        /* ignore a corrupt payload from another tab */
-      }
-    };
+        if (products.length === 0) await putMany(COL.PRODUCTS, INITIAL_PRODUCTS);
+        if (coupons.length === 0) await putMany(COL.COUPONS, INITIAL_COUPONS);
+        if (banners.length === 0) await putMany(COL.BANNERS, INITIAL_BANNERS);
 
-    try {
-      channel = new BroadcastChannel('ovenglow_sync_channel');
-      channel.onmessage = (event) => {
-        const type = event.data?.type;
-        if (type === 'ORDERS') reload<Order[]>(STORAGE_KEYS.ORDERS, setOrders);
-        else if (type === 'PRODUCTS') reload<Product[]>(STORAGE_KEYS.PRODUCTS, setProducts);
-        else if (type === 'COUPONS') reload<Coupon[]>(STORAGE_KEYS.COUPONS, setCoupons);
-        else if (type === 'BANNERS') reload<Banner[]>(STORAGE_KEYS.BANNERS, setBanners);
-        else if (type === 'SETTINGS') reload<StoreSettings>(STORAGE_KEYS.SETTINGS, setStoreSettings);
-      };
-    } catch {
-      // Not supported here.
-    }
-    return () => channel?.close();
-  }, [setOrders, setProducts, setCoupons, setBanners, setStoreSettings]);
+        const settingsDoc = await getDoc(doc(db, COL.SETTINGS, SETTINGS_DOC));
+        if (!settingsDoc.exists()) {
+          await setDoc(doc(db, COL.SETTINGS, SETTINGS_DOC), DEFAULT_STORE_SETTINGS);
+        }
+      } catch (e) {
+        console.error('Could not set up the shop:', e);
+        seeded.current = false;
+        reportStorage('Could not load the starting catalogue. Check the Firestore rules.');
+      }
+    })();
+  }, [
+    currentStaff,
+    products.length,
+    coupons.length,
+    banners.length,
+    productsLive.ready,
+    couponsLive.ready,
+    bannersLive.ready,
+    settingsLive.ready,
+    reportStorage,
+  ]);
 
   /* ------------------------------------------------------------ settings -- */
 
-  const updateStoreSettings = useCallback(
-    (updates: Partial<StoreSettings>) => {
-      setStoreSettings((prev) => ({ ...prev, ...updates }));
-      notifySync('SETTINGS');
-    },
-    [setStoreSettings, notifySync],
-  );
+  const updateStoreSettings = useCallback(async (updates: Partial<StoreSettings>) => {
+    await patchRecord(COL.SETTINGS, SETTINGS_DOC, updates);
+  }, []);
 
   /* ----------------------------------------------------------- catalogue -- */
 
@@ -376,21 +572,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [products]);
 
   const addProduct = useCallback(
-    (newProd: Omit<Product, 'id'>): Result => {
+    async (newProd: Omit<Product, 'id'>): Promise<Result> => {
       const sku = newProd.sku.trim();
       if (!sku) return { success: false, message: 'A product code (SKU) is required.' };
       if (products.some((p) => p.sku.toLowerCase() === sku.toLowerCase())) {
         return { success: false, message: `Product code "${sku}" already exists.` };
       }
-      setProducts((prev) => [{ ...newProd, sku, id: generateId('prod') }, ...prev]);
-      notifySync('PRODUCTS');
+      try {
+        await putRecord(COL.PRODUCTS, { ...newProd, sku, id: generateId('prod') });
+      } catch (e) {
+        return { success: false, message: writeFailure(e, 'add that product') };
+      }
       return { success: true, message: `"${newProd.name}" added to the catalogue.` };
     },
-    [products, setProducts, notifySync],
+    [products],
   );
 
   const updateProduct = useCallback(
-    (id: string, updates: Partial<Product>): Result => {
+    async (id: string, updates: Partial<Product>): Promise<Result> => {
       if (updates.sku !== undefined) {
         const sku = updates.sku.trim();
         if (!sku) return { success: false, message: 'A product code (SKU) is required.' };
@@ -411,36 +610,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return { success: false, message: 'Set a price before publishing this product.' };
         }
       }
-      setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
-      notifySync('PRODUCTS');
+      try {
+        await patchRecord(COL.PRODUCTS, id, updates as Record<string, unknown>);
+      } catch (e) {
+        return { success: false, message: writeFailure(e, 'save that change') };
+      }
       return { success: true, message: 'Saved.' };
     },
-    [products, setProducts, notifySync],
+    [products],
   );
 
-  const deleteProduct = useCallback(
-    (id: string) => {
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-      notifySync('PRODUCTS');
-    },
-    [setProducts, notifySync],
-  );
+  const deleteProduct = useCallback(async (id: string) => {
+    await removeRecord(COL.PRODUCTS, id);
+  }, []);
 
-  const bulkSetPublished = useCallback(
-    (ids: string[], isPublished: boolean) => {
-      setProducts((prev) => prev.map((p) => (ids.includes(p.id) ? { ...p, isPublished } : p)));
-      notifySync('PRODUCTS');
-    },
-    [setProducts, notifySync],
-  );
+  const bulkSetPublished = useCallback(async (ids: string[], isPublished: boolean) => {
+    await patchMany(COL.PRODUCTS, ids, { isPublished });
+  }, []);
 
-  const bulkDelete = useCallback(
-    (ids: string[]) => {
-      setProducts((prev) => prev.filter((p) => !ids.includes(p.id)));
-      notifySync('PRODUCTS');
-    },
-    [setProducts, notifySync],
-  );
+  const bulkDelete = useCallback(async (ids: string[]) => {
+    await removeMany(COL.PRODUCTS, ids);
+  }, []);
 
   /* --------------------------------------------------------------- cart -- */
 
@@ -534,7 +724,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const removeCoupon = useCallback(() => setActiveCouponCode(null), []);
 
   const addCoupon = useCallback(
-    (c: Omit<Coupon, 'id' | 'createdAt' | 'timesUsed'>): Result => {
+    async (c: Omit<Coupon, 'id' | 'createdAt' | 'timesUsed'>): Promise<Result> => {
       const code = c.code.trim().toUpperCase();
       if (!code) return { success: false, message: 'A coupon code is required.' };
       if (coupons.some((existing) => existing.code.toUpperCase() === code)) {
@@ -546,62 +736,48 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (c.discountType === 'percentage' && c.discountValue > 100) {
         return { success: false, message: 'A percentage discount cannot exceed 100%.' };
       }
-      setCoupons((prev) => [
-        { ...c, code, id: generateId('coupon'), createdAt: new Date().toISOString(), timesUsed: 0 },
-        ...prev,
-      ]);
-      notifySync('COUPONS');
+      try {
+        await putRecord(COL.COUPONS, {
+          ...c,
+          code,
+          id: generateId('coupon'),
+          createdAt: new Date().toISOString(),
+          timesUsed: 0,
+        });
+      } catch (e) {
+        return { success: false, message: writeFailure(e, 'create that coupon') };
+      }
       return { success: true, message: `Coupon ${code} created.` };
     },
-    [coupons, setCoupons, notifySync],
+    [coupons],
   );
 
-  const updateCoupon = useCallback(
-    (id: string, updates: Partial<Coupon>) => {
-      setCoupons((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
-      notifySync('COUPONS');
-    },
-    [setCoupons, notifySync],
-  );
+  const updateCoupon = useCallback(async (id: string, updates: Partial<Coupon>) => {
+    await patchRecord(COL.COUPONS, id, updates as Record<string, unknown>);
+  }, []);
 
-  const deleteCoupon = useCallback(
-    (id: string) => {
-      setCoupons((prev) => prev.filter((c) => c.id !== id));
-      notifySync('COUPONS');
-    },
-    [setCoupons, notifySync],
-  );
+  const deleteCoupon = useCallback(async (id: string) => {
+    await removeRecord(COL.COUPONS, id);
+  }, []);
 
   /* ------------------------------------------------------------ banners -- */
 
-  const addBanner = useCallback(
-    (b: Omit<Banner, 'id'>) => {
-      setBanners((prev) => [...prev, { ...b, id: generateId('banner') }]);
-      notifySync('BANNERS');
-    },
-    [setBanners, notifySync],
-  );
+  const addBanner = useCallback(async (b: Omit<Banner, 'id'>) => {
+    await putRecord(COL.BANNERS, { ...b, id: generateId('banner') });
+  }, []);
 
-  const updateBanner = useCallback(
-    (id: string, updates: Partial<Banner>) => {
-      setBanners((prev) => prev.map((b) => (b.id === id ? { ...b, ...updates } : b)));
-      notifySync('BANNERS');
-    },
-    [setBanners, notifySync],
-  );
+  const updateBanner = useCallback(async (id: string, updates: Partial<Banner>) => {
+    await patchRecord(COL.BANNERS, id, updates as Record<string, unknown>);
+  }, []);
 
-  const deleteBanner = useCallback(
-    (id: string) => {
-      setBanners((prev) => prev.filter((b) => b.id !== id));
-      notifySync('BANNERS');
-    },
-    [setBanners, notifySync],
-  );
+  const deleteBanner = useCallback(async (id: string) => {
+    await removeRecord(COL.BANNERS, id);
+  }, []);
 
   /* ------------------------------------------------------------- orders -- */
 
   const createOrder = useCallback(
-    (customer: CustomerDetails, paymentMethod: PaymentMethod): Order => {
+    async (customer: CustomerDetails, paymentMethod: PaymentMethod): Promise<Order> => {
       const partners = [
         { name: 'Ovenglow Delivery', vehicleNumber: 'Own rider' },
         { name: 'Ovenglow Delivery', vehicleNumber: 'Own rider' },
@@ -610,9 +786,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const partner = partners[Math.floor(Math.random() * partners.length)];
       const now = new Date().toISOString();
 
+      // Firestore issues the document id, and it has to be unguessable: it is
+      // the only thing protecting an order from being read by a stranger who
+      // has the number. `generateId('ord')` produced something predictable.
+      const ref = doc(collection(db, COL.ORDERS));
+
       const order: Order = {
-        id: generateId('ord'),
-        orderNumber: generateOrderNumber(orders),
+        id: ref.id,
+        // Numbering off `orders` only worked when this device could see every
+        // order, which a customer's phone cannot. Counting today's orders in
+        // the database keeps the human-readable number sequential.
+        orderNumber: await nextOrderNumber(),
         customer,
         items: [...cart],
         itemTotal: totals.itemTotal,
@@ -641,41 +825,91 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ],
       };
 
-      setProducts((prev) =>
-        prev.map((prod) => {
-          const line = cart.find((ci) => ci.product.id === prod.id);
-          if (!line) return prod;
-          return { ...prod, stockCount: Math.max(0, prod.stockCount - line.quantity) };
-        }),
-      );
+      // Stock and coupon counts used to be adjusted here. They cannot be: the
+      // catalogue is staff-writable only, and a customer at checkout is not
+      // signed in. Opening `products` to anonymous writes so a cart could
+      // decrement it would let anyone zero the shop's entire stock.
+      //
+      // They move to the moment staff confirm the order instead, which is also
+      // the more honest reading: an unconfirmed enquiry should not be eating
+      // stock the shop has not agreed to sell.
+      const { id: _ignored, ...body } = order;
+      await setDoc(ref, stripForFirestore(body));
 
-      if (activeCoupon) {
-        setCoupons((prev) =>
-          prev.map((c) => (c.id === activeCoupon.id ? { ...c, timesUsed: c.timesUsed + 1 } : c)),
+      // How the customer finds this again: the hash of their order number and
+      // their phone number, holding the id that was just generated. Written
+      // second, so a failure here cannot leave an order number pointing at
+      // nothing.
+      try {
+        await setDoc(
+          doc(db, COL.ORDER_LOOKUP, await orderLookupKey(order.orderNumber, customer.phone)),
+          { orderId: ref.id },
         );
+      } catch (e) {
+        // The order is placed and the shop can see it; only self-service
+        // tracking is affected, and WhatsApp still reaches us.
+        console.error('Could not write the tracking lookup:', e);
       }
 
-      setOrders((prev) => [order, ...prev]);
       setCart([]);
       setActiveCouponCode(null);
-      setActiveTrackingId(order.orderNumber);
-      notifySync('ORDERS');
-      notifySync('PRODUCTS');
+      setTrackedOrder(order);
       return order;
     },
-    [cart, orders, totals, activeCoupon, storeSettings.phone, setProducts, setCoupons, setOrders, setCart, notifySync],
+    [cart, totals, activeCoupon, storeSettings.phone],
+  );
+
+  /**
+   * Book the stock and the coupon use for an order the shop has just accepted.
+   *
+   * Runs on confirmation rather than at checkout, because only staff may write
+   * the catalogue -- and because an enquiry nobody has agreed to bake should
+   * not be holding stock. Failures are logged and swallowed: the order is
+   * already confirmed, and refusing the confirmation because a stock counter
+   * would not move would be the worse outcome.
+   */
+  const bookStockAndCoupon = useCallback(
+    async (order: Order) => {
+      try {
+        await Promise.all(
+          order.items.map((line) => {
+            const live = products.find((p) => p.id === line.product.id);
+            if (!live) return Promise.resolve();
+            return patchRecord(COL.PRODUCTS, live.id, {
+              stockCount: Math.max(0, live.stockCount - line.quantity),
+            });
+          }),
+        );
+
+        if (order.couponCode) {
+          const coupon = coupons.find((c) => c.code === order.couponCode);
+          if (coupon) {
+            await patchRecord(COL.COUPONS, coupon.id, { timesUsed: coupon.timesUsed + 1 });
+          }
+        }
+      } catch (e) {
+        console.error('Could not book stock for', order.orderNumber, e);
+      }
+    },
+    [products, coupons],
   );
 
   /** The single door every stage change goes through. */
   const applyStageChange = useCallback(
-    (
+    async (
       orderId: string,
       to: OrderStage,
       note: string,
       by: string,
       patch?: (o: Order) => Partial<Order>,
-    ): Result => {
-      const order = orders.find((o) => o.id === orderId || o.orderNumber === orderId);
+    ): Promise<Result> => {
+      // Staff work from the live list. A customer submitting a UPI reference
+      // has only the one order they are tracking, which is not in it.
+      const order =
+        orders.find((o) => o.id === orderId || o.orderNumber === orderId) ??
+        (trackedOrder && (trackedOrder.id === orderId || trackedOrder.orderNumber === orderId)
+          ? trackedOrder
+          : undefined);
       if (!order) return { success: false, message: 'Order not found.' };
       if (!canTransition(order, to)) {
         return {
@@ -685,27 +919,36 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       const at = new Date().toISOString();
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === order.id
-            ? {
-                ...o,
-                ...(patch ? patch(o) : {}),
-                stage: to,
-                updatedAt: at,
-                stageHistory: [...o.stageHistory, { stage: to, at, by, note }],
-              }
-            : o,
-        ),
-      );
-      notifySync('ORDERS');
+      const next: Order = {
+        ...order,
+        ...(patch ? patch(order) : {}),
+        stage: to,
+        updatedAt: at,
+        stageHistory: [...order.stageHistory, { stage: to, at, by, note }],
+      };
+
+      try {
+        const { id: _ignored, ...body } = next;
+        await setDoc(doc(db, COL.ORDERS, order.id), stripForFirestore(body));
+      } catch (e) {
+        return { success: false, message: writeFailure(e, `move order ${order.orderNumber}`) };
+      }
+
+      // The customer's own copy is not fed by a listener, so it is refreshed
+      // here; staff get the change from onSnapshot.
+      setTrackedOrder((prev) => (prev && prev.id === order.id ? next : prev));
+
+      // Confirming an order is the point at which the shop commits to baking
+      // it, so that is where stock and coupon use are booked.
+      if (to === 'confirmed') void bookStockAndCoupon(next);
+
       return { success: true, message: `Order ${order.orderNumber} moved to ${STAGES[to].label}.` };
     },
-    [orders, setOrders, notifySync],
+    [orders, trackedOrder],
   );
 
   const advanceOrderStage = useCallback(
-    (orderId: string, to: OrderStage, note?: string): Result => {
+    async (orderId: string, to: OrderStage, note?: string): Promise<Result> => {
       if (!currentStaff) return { success: false, message: 'Sign in to change an order.' };
 
       // Reaching `paid` is an assertion that money arrived; it is gated
@@ -725,7 +968,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const submitUpiReference = useCallback(
-    (orderId: string, reference: string): Result => {
+    async (orderId: string, reference: string): Promise<Result> => {
       const clean = reference.trim();
       if (clean.length < 6) {
         return { success: false, message: 'Enter the full UPI reference number from your payment app.' };
@@ -748,7 +991,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const verifyPayment = useCallback(
-    (orderId: string, note?: string): Result => {
+    async (orderId: string, note?: string): Promise<Result> => {
       if (!currentStaff || !can(currentStaff.role, 'orders.verify_payment')) {
         return { success: false, message: 'Only an Admin or Super Admin can verify a payment.' };
       }
@@ -774,7 +1017,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const rejectPayment = useCallback(
-    (orderId: string, reason: string): Result => {
+    async (orderId: string, reason: string): Promise<Result> => {
       if (!currentStaff || !can(currentStaff.role, 'orders.verify_payment')) {
         return { success: false, message: 'Only an Admin or Super Admin can reject a payment.' };
       }
@@ -795,24 +1038,62 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   /**
-   * Look an order up by its number, or by the phone it was placed with.
-   * Returns undefined when nothing matches — callers must not fall back to
-   * showing another customer's order.
+   * Find one order, given its number and the phone it was placed with.
+   *
+   * This used to search the local order list by number alone. That list was
+   * every order the shop had ever taken, sitting in the customer's browser, and
+   * the numbers run in sequence -- so anyone could read anyone's address by
+   * counting. Now a customer's browser holds no orders at all, and finding one
+   * means proving you know both halves: the hash of number and phone is the
+   * only route to the document id.
    */
-  const getOrderById = useCallback(
-    (query: string): Order | undefined => {
-      const clean = query.trim();
-      if (!clean) return undefined;
-      const digits = clean.replace(/\D/g, '');
-      return orders.find(
-        (o) =>
-          o.orderNumber.toLowerCase() === clean.toLowerCase() ||
-          o.id === clean ||
-          (digits.length === 10 && o.customer.phone.replace(/\D/g, '').endsWith(digits)),
+  const findOrder = useCallback(
+    async (orderNumber: string, phone: string): Promise<Result> => {
+      const number = orderNumber.trim();
+      if (!number) return { success: false, message: 'Enter your order number.' };
+      if (!isUsablePhone(phone)) {
+        return { success: false, message: 'Enter the 10-digit mobile number you ordered with.' };
+      }
+
+      // Staff already have every order; no need to make them type a phone.
+      const mine = orders.find(
+        (o) => o.orderNumber.toLowerCase() === number.toLowerCase() || o.id === number,
       );
+      if (mine) {
+        setTrackedOrder(mine);
+        return { success: true, message: `Order ${mine.orderNumber}.` };
+      }
+
+      setIsFindingOrder(true);
+      try {
+        const key = await orderLookupKey(number, phone);
+        const pointer = await getDoc(doc(db, COL.ORDER_LOOKUP, key));
+        if (!pointer.exists()) {
+          return {
+            success: false,
+            message:
+              'No order matches that number and mobile number. Check both, or message us on WhatsApp.',
+          };
+        }
+
+        const snap = await getDoc(doc(db, COL.ORDERS, pointer.data().orderId as string));
+        if (!snap.exists()) {
+          return { success: false, message: 'That order could not be found. Please message us.' };
+        }
+
+        const found = { ...(snap.data() as Order), id: snap.id };
+        setTrackedOrder(found);
+        return { success: true, message: `Order ${found.orderNumber}.` };
+      } catch (e) {
+        return { success: false, message: writeFailure(e, 'look up that order') };
+      } finally {
+        setIsFindingOrder(false);
+      }
     },
     [orders],
   );
+
+  const clearTrackedOrder = useCallback(() => setTrackedOrder(null), []);
 
   /* -------------------------------------------------- customer sessions -- */
 
@@ -846,55 +1127,83 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   /* ----------------------------------------------------- staff sessions -- */
 
+  /**
+   * Sign in with a password.
+   *
+   * The old version took an email and nothing else, checked it against a list
+   * the browser itself held, and wrote the resulting "session" to localStorage.
+   * The login screen printed every staff address as a button, so becoming a
+   * Super Admin took two clicks. Firebase checks the password now, and the
+   * session is a signed token this code cannot forge.
+   */
   const loginAsStaff = useCallback(
-    (email: string): Result => {
-      const clean = email.trim().toLowerCase();
-      const match = staff.find((s) => s.email.toLowerCase() === clean);
-      if (!match) {
-        return { success: false, message: 'That email is not registered as Ovenglow staff.' };
-      }
-      if (!match.isActive && !isPermanentSuperAdmin(clean)) {
-        return { success: false, message: 'This account has been deactivated.' };
-      }
-      const session = { ...match, lastLoginAt: new Date().toISOString() };
-      setCurrentStaff(session);
-      setStaff((prev) => prev.map((s) => (s.id === match.id ? session : s)));
-      return { success: true, message: `Signed in as ${match.name}.` };
+    async (email: string, password: string): Promise<Result> => {
+      if (!email.trim()) return { success: false, message: 'Enter your email address.' };
+      if (!password) return { success: false, message: 'Enter your password.' };
+      return signInStaff(email, password);
     },
-    [staff, setCurrentStaff, setStaff],
+    [],
   );
 
-  const logoutStaff = useCallback(() => setCurrentStaff(null), [setCurrentStaff]);
+  const logoutStaff = useCallback(async () => {
+    await signOutStaff();
+  }, []);
 
+  const sendStaffPasswordReset = useCallback((email: string) => resetStaffPassword(email), []);
+
+  const resendVerification = useCallback(() => sendVerification(), []);
+
+  const recheckVerification = useCallback(() => refreshVerification(), []);
+
+  /**
+   * Add a colleague: a login they can use, and the record that gives it meaning.
+   *
+   * Both halves are needed. A Firebase account on its own grants nothing,
+   * because every security rule reads `staff/{uid}`; the record on its own
+   * cannot be signed in to. The document id is deliberately the Firebase uid,
+   * so the rules can look someone up straight from their token.
+   */
   const addStaff = useCallback(
-    (name: string, email: string, role: StaffRole): Result => {
+    async (name: string, email: string, role: StaffRole, password: string): Promise<Result> => {
       const cleanName = name.trim();
       const cleanEmail = email.trim().toLowerCase();
       if (!cleanName) return { success: false, message: 'Enter the staff member’s full name.' };
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
         return { success: false, message: 'Enter a valid email address.' };
       }
+      if (password.length < 6) {
+        return { success: false, message: 'Give them a password of at least six characters.' };
+      }
       if (staff.some((s) => s.email.toLowerCase() === cleanEmail)) {
         return { success: false, message: 'That email already has an account.' };
       }
-      setStaff((prev) => [
-        ...prev,
-        {
-          id: generateId('staff'),
+
+      const created = await createStaffLogin(cleanEmail, password);
+      if (!created.success || !created.uid) return created;
+
+      try {
+        await putRecord(COL.STAFF, {
+          id: created.uid,
           name: cleanName,
           email: cleanEmail,
           role,
           isActive: true,
           addedAt: new Date().toISOString(),
-        },
-      ]);
-      return { success: true, message: `${cleanName} added.` };
+        });
+      } catch (e) {
+        return { success: false, message: writeFailure(e, 'save that staff record') };
+      }
+
+      return {
+        success: true,
+        message: `${cleanName} added. Give them the password you set and ask them to change it.`,
+      };
     },
-    [staff, setStaff],
+    [staff],
   );
 
   const updateStaff = useCallback(
-    (id: string, updates: Partial<StaffUser>): Result => {
+    async (id: string, updates: Partial<StaffUser>): Promise<Result> => {
       const target = staff.find((s) => s.id === id);
       if (!target) return { success: false, message: 'Staff member not found.' };
       if (isPermanentSuperAdmin(target.email) && (updates.role || updates.isActive === false)) {
@@ -903,16 +1212,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           message: 'This owner account is a permanent Super Admin and cannot be changed.',
         };
       }
-      setStaff((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
-      // Keep the live session in step if an admin edited themselves.
-      setCurrentStaff((prev) => (prev && prev.id === id ? { ...prev, ...updates } : prev));
+      try {
+        await patchRecord(COL.STAFF, id, updates as Record<string, unknown>);
+      } catch (e) {
+        return { success: false, message: writeFailure(e, 'update that staff account') };
+      }
       return { success: true, message: 'Staff account updated.' };
     },
-    [staff, setStaff, setCurrentStaff],
+    [staff],
   );
 
   const removeStaff = useCallback(
-    (id: string): Result => {
+    async (id: string): Promise<Result> => {
       const target = staff.find((s) => s.id === id);
       if (!target) return { success: false, message: 'Staff member not found.' };
       if (isPermanentSuperAdmin(target.email)) {
@@ -921,11 +1232,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (staff.filter((s) => s.role === 'super_admin' && s.isActive).length <= 1 && target.role === 'super_admin') {
         return { success: false, message: 'At least one Super Admin must remain.' };
       }
-      setStaff((prev) => prev.filter((s) => s.id !== id));
-      setCurrentStaff((prev) => (prev && prev.id === id ? null : prev));
-      return { success: true, message: `${target.name} removed.` };
+      try {
+        await removeRecord(COL.STAFF, id);
+      } catch (e) {
+        return { success: false, message: writeFailure(e, 'remove that staff account') };
+      }
+      // Their Firebase login still exists and can still be signed in to; with
+      // no staff record it now grants nothing, because every rule refuses it.
+      return {
+        success: true,
+        message: `${target.name} removed. Their login no longer has any access.`,
+      };
     },
-    [staff, setStaff, setCurrentStaff],
+    [staff],
   );
 
   const hasPermission = useCallback(
@@ -1051,16 +1370,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     bulkSetPublished,
     bulkDelete,
     findDuplicateSkus,
+    productsReady: productsLive.ready,
 
     orders,
+    ordersReady: ordersLive.ready,
     createOrder,
     advanceOrderStage,
     submitUpiReference,
     verifyPayment,
     rejectPayment,
-    getOrderById,
-    activeTrackingId,
-    setActiveTrackingId,
+    trackedOrder,
+    findOrder,
+    clearTrackedOrder,
+    isFindingOrder,
 
     cart,
     addToCart,
@@ -1109,6 +1431,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     currentStaff,
     loginAsStaff,
     logoutStaff,
+    sendStaffPasswordReset,
+    authReady,
+    needsEmailVerification,
+    resendVerification,
+    recheckVerification,
     addStaff,
     updateStaff,
     removeStaff,

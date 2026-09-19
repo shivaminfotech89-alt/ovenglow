@@ -19,17 +19,18 @@ import { Product, Order } from './types';
 
 function AppContent() {
   const { 
-    activeTab, 
-    setActiveTab, 
-    setActiveTrackingId,
+    activeTab,
+    setActiveTab,
     isCustomerAuthOpen,
-    setIsCustomerAuthOpen
+    setIsCustomerAuthOpen,
   } = useStore();
   const [selectedProductForModal, setSelectedProductForModal] = useState<Product | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(false);
 
-  const handleOrderSuccess = (order: Order) => {
-    setActiveTrackingId(order.orderNumber);
+  const handleOrderSuccess = (_order: Order) => {
+    // createOrder already put this order on the tracking page; there is no
+    // lookup to do, and the customer should not have to prove ownership of an
+    // order they placed thirty seconds ago.
     setActiveTab('track');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

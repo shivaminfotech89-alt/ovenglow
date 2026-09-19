@@ -60,6 +60,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('UPI');
   const [isPlacing, setIsPlacing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Every hook belongs above the `if (!isOpen) return null` below. One declared
+  // after it made the hook count change when the modal opened, which React
+  // treats as a fatal error rather than a warning.
+  const [placeError, setPlaceError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!customerUser) return;
@@ -104,8 +108,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
     }
     setStep('payment');
   };
-
-  const [placeError, setPlaceError] = useState<string | null>(null);
 
   const placeOrder = async () => {
     setIsPlacing(true);

@@ -71,6 +71,8 @@ function newOrder(overrides = {}) {
 }
 
 const OWNER = 'shivaminfotech89@gmail.com';
+/** The shop's other owner address. Both must work identically. */
+const OWNER_2 = 'ovenglowdelights@gmail.com';
 
 const env = await initializeTestEnvironment({
   projectId: 'ovenglow-rules-test',
@@ -100,6 +102,12 @@ const owner = env.authenticatedContext('owner-uid', {
 const unverifiedOwner = env.authenticatedContext('unverified-uid', {
   email: OWNER,
   email_verified: false,
+}).firestore();
+
+/** The second owner address, which must get in on exactly the same terms. */
+const owner2 = env.authenticatedContext('owner2-uid', {
+  email: OWNER_2,
+  email_verified: true,
 }).firestore();
 
 /** An order manager: works orders, must not touch prices or settings. */
@@ -279,6 +287,22 @@ await check('can list every order', () =>
   assertSucceeds(getDocs(collection(owner, 'orders'))));
 await check('can list the staff', () =>
   assertSucceeds(getDocs(collection(owner, 'staff'))));
+
+section('The second owner address');
+await check('is a Super Admin too, with no staff record of its own', () =>
+  assertSucceeds(updateDoc(doc(owner2, 'settings/store'), { gstPercent: 5 })));
+await check('can edit the catalogue', () =>
+  assertSucceeds(updateDoc(doc(owner2, 'products/p1'), { price: 270 })));
+await check('can list every order', () =>
+  assertSucceeds(getDocs(collection(owner2, 'orders'))));
+await check('can bootstrap its own staff record', () =>
+  assertSucceeds(
+    setDoc(doc(owner2, 'staff/owner2-uid'), {
+      email: OWNER_2,
+      name: 'Second owner',
+      role: 'super_admin',
+      isActive: true,
+    })));
 
 section('An owner who has not verified their email');
 await check('CANNOT bootstrap themselves', () =>

@@ -156,9 +156,31 @@ await seedOwner();
 
 /* ---------------------------------------------- the shop, as an admin sees it */
 
+// The storefront must not advertise the admin at all: no Staff button in the
+// navigation, none in the phone's tab bar, none in the footer.
+const shopper = await openContext('shopper');
+const advertised = await shopper.page.evaluate(() => {
+  const words = /staff|admin|console|sign\s*in to the console/i;
+  return [...document.querySelectorAll('button, a')]
+    .filter((el) => (el.offsetWidth || el.offsetHeight) && words.test(el.textContent || ''))
+    .map((el) => (el.textContent || '').trim().slice(0, 40));
+});
+check(
+  'the storefront shows no way into the admin',
+  advertised.length === 0,
+  `found: ${JSON.stringify(advertised)}`,
+);
+await shopper.page.screenshot({ path: `${SHOTS}/e2e-shopfront.png` });
+await shopper.ctx.close();
+
+// ...but the address still opens it.
 const admin = await openContext('admin');
-await admin.page.locator('button:visible', { hasText: /^Staff$/ }).first().click();
-await admin.page.waitForTimeout(800);
+await admin.page.goto(`${BASE}#staff`, { waitUntil: 'domcontentloaded' });
+await admin.page.waitForTimeout(1800);
+check(
+  'the /#staff address opens the sign-in screen',
+  await admin.page.evaluate(() => /staff sign in/i.test(document.body.innerText)),
+);
 
 check(
   'the login screen asks for a password',

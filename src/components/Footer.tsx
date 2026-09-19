@@ -16,8 +16,14 @@ import {
 } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const { setActiveTab, setSelectedCategory, getWhatsAppSupportLink, setIsCustomerAuthOpen, storeSettings } =
-    useStore();
+  const {
+    setActiveTab,
+    setSelectedCategory,
+    getWhatsAppSupportLink,
+    setIsCustomerAuthOpen,
+    storeSettings,
+    currentStaff,
+  } = useStore();
 
   return (
     <footer className="w-full bg-[#241510] border-t border-[#3D2317] text-[#D4C5B9] text-xs mt-16">
@@ -175,17 +181,22 @@ export const Footer: React.FC = () => {
           <span className="flex items-center gap-1.5">
             Baked in small batches in {storeSettings.city}
           </span>
-          <button
-            onClick={() => {
-              setActiveTab('admin');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="text-[#66493B] hover:text-[#C58940] transition-colors text-[11px] flex items-center gap-1 font-mono"
-            title="Staff sign-in"
-          >
-            <Lock className="w-2.5 h-2.5" />
-            <span>Staff sign-in</span>
-          </button>
+          {/* The staff sign-in link that used to sit here is gone: the admin
+              is not advertised on the storefront. Staff reach it at /#staff,
+              and once signed in the Console appears in the navigation. */}
+          {currentStaff && (
+            <button
+              onClick={() => {
+                setActiveTab('admin');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="flex items-center gap-1 font-mono text-[11px] text-[#66493B] transition-colors hover:text-[#C58940]"
+              title="Back to the console"
+            >
+              <Lock className="w-2.5 h-2.5" />
+              <span>Console</span>
+            </button>
+          )}
         </div>
       </div>
     </footer>

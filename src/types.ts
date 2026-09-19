@@ -246,7 +246,6 @@ export interface StoreSettings {
   // Payment
   upiId: string;
   upiAccountName: string;
-  upiQrImage: string;
   paymentInstructions: string;
 
   // Charges — read by the single pricing function, editable by a Super Admin.

@@ -17,6 +17,13 @@
  * with a dev server on 5199 built with VITE_USE_EMULATOR=1.
  */
 import { chromium } from 'playwright';
+import { createHash } from 'node:crypto';
+
+/** Mirrors orderLookupKey() in src/lib/orderLookup.ts. */
+function lookupKey(orderNumber, phone) {
+  const digits = phone.replace(/\D/g, '').slice(-10);
+  return createHash('sha256').update(`${orderNumber.trim().toUpperCase()}|${digits}`).digest('hex');
+}
 
 const BASE = 'http://127.0.0.1:5199/';
 const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -285,8 +292,77 @@ check(
 );
 await admin.page.screenshot({ path: `${SHOTS}/e2e-admin-orders.png` });
 
+/* ------------------------------------- paying in advance, as a customer does */
+
+// The shop's UPI id is what turns the payment panel on. Seeded rather than
+// typed through Settings so this test is about the customer's side.
+await seedDoc('settings/store', {
+  storeName: { stringValue: 'Ovenglow Delights' },
+  upiId: { stringValue: 'ovenglowdelights@okhdfcbank' },
+  upiAccountName: { stringValue: 'Ovenglow Delights' },
+  paymentInstructions: { stringValue: 'Scan, pay, then send us the reference.' },
+  whatsappNumber: { stringValue: '9824704877' },
+  city: { stringValue: 'Ahmedabad' },
+});
+
+const payNumber = `OG-PAY-${Date.now().toString().slice(-6)}`;
+const payPhone = '9812345678';
+
+// Placed the way a customer places one. Creating it directly at
+// awaiting_payment is refused by the rules -- every order must start at
+// inquiry_received -- which is correct, and cost this test a round when it
+// tried to shortcut. Staff move it on, so the move is made with staff
+// authority.
+const placedForPay = await placeOrderAsStranger(payNumber);
+check('the order for payment was accepted', placedForPay.ok, placedForPay.body.slice(0, 160));
+const payOrderId = JSON.parse(placedForPay.body).name.split('/').pop();
+await fetch(`${REST}/orders/${payOrderId}?updateMask.fieldPaths=stage`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
+  body: JSON.stringify({ fields: { stage: { stringValue: 'awaiting_payment' } } }),
+});
+await seedDoc(`orderLookup/${lookupKey(payNumber, payPhone)}`, {
+  orderId: { stringValue: payOrderId },
+});
+
+const tracker = await openContext('tracker');
+await tracker.page.locator('button:visible', { hasText: /^Track/ }).first().click();
+await tracker.page.waitForTimeout(900);
+await tracker.page.fill('input[aria-label="Order number"]', payNumber);
+await tracker.page.fill('input[aria-label="Mobile number"]', payPhone);
+await tracker.page.click('form button[type=submit]');
+await tracker.page.waitForTimeout(3500);
+
+check(
+  'an order is found with its number AND phone',
+  await tracker.page.evaluate((n) => document.body.innerText.includes(n), payNumber),
+);
+
+const qr = await tracker.page.evaluate(() => {
+  const svg = document.querySelector('svg[aria-label="UPI payment QR code"]');
+  return svg ? svg.outerHTML : null;
+});
+check('a UPI QR is shown for the amount owed', !!qr);
+if (qr) {
+  await tracker.page
+    .locator('svg[aria-label="UPI payment QR code"]')
+    .screenshot({ path: `${SHOTS}/e2e-upi-qr.png` });
+}
+await tracker.page.screenshot({ path: `${SHOTS}/e2e-tracking-pay.png` });
+
+// The wrong phone number must find nothing, which is the whole point of
+// asking for it: order numbers run in sequence and would otherwise be a key.
+await tracker.page.fill('input[aria-label="Mobile number"]', '9000000000');
+await tracker.page.click('form button[type=submit]');
+await tracker.page.waitForTimeout(2500);
+check(
+  'the wrong phone number finds nothing',
+  await tracker.page.evaluate(() => /no order matches/i.test(document.body.innerText)),
+);
+
 console.log(`\nadmin console errors:    ${admin.errors.length ? admin.errors.slice(0, 4) : 'none'}`);
 console.log(`customer console errors: ${customer.errors.length ? customer.errors.slice(0, 4) : 'none'}`);
+console.log(`tracker console errors:  ${tracker.errors.length ? tracker.errors.slice(0, 4) : 'none'}`);
 
 await browser.close();
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -67,19 +67,15 @@ export const Navbar: React.FC = () => {
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalCartAmount = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
-  const indianCities = [
-    { name: 'Ahmedabad', pin: '380054' },
-    { name: 'Mumbai', pin: '400001' },
-    { name: 'Bengaluru', pin: '560001' },
-    { name: 'New Delhi', pin: '110001' },
-    { name: 'Pune', pin: '411001' },
-    { name: 'Hyderabad', pin: '500001' },
-  ];
 
-  const handleApplyPincode = (city: string, pin: string) => {
-    setDeliveryPincode(`${pin} - ${city}`);
+  const handleApplyPincode = (area: string, pin: string) => {
+    setDeliveryPincode(`${area} ${pin}`.trim());
+    setCustomPin('');
     setIsPincodeModalOpen(false);
   };
+
+  // Just the area for the chip; the pin is detail the header does not need.
+  const deliveryArea = deliveryPincode.replace(/\s*\d{6}\s*$/, '').trim() || deliveryPincode;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,17 +128,10 @@ export const Navbar: React.FC = () => {
               onClick={() => setIsPincodeModalOpen(true)}
               className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7F2] hover:bg-[#F2ECE4] border border-[#E8DFD8] text-xs text-[#5C4033] transition-colors shrink-0"
             >
-              <MapPin className="w-3.5 h-3.5 text-[#C58940]" />
-              {deliveryPincode ? (
-                <>
-                  <span className="font-normal text-[#8C766B]">Deliver to</span>
-                  <span className="max-w-[120px] truncate font-medium text-[#241510]">
-                    {deliveryPincode}
-                  </span>
-                </>
-              ) : (
-                <span className="font-medium text-[#241510]">Set area</span>
-              )}
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-[#C58940]" />
+              <span className="max-w-[9rem] truncate font-medium text-[#241510]">
+                {deliveryArea || 'Set your area'}
+              </span>
             </button>
           </div>
 
@@ -326,68 +315,108 @@ export const Navbar: React.FC = () => {
           </form>
         </div>
 
-        {/* Indian Delivery Pincode Modal */}
-        {isPincodeModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-            <div className="relative w-full max-w-sm bg-white border border-[#E8DFD8] rounded-2xl p-5 shadow-xl space-y-3 text-[#241510]">
-              <div className="flex items-center justify-between border-b border-[#F0EAE1] pb-3">
-                <h4 className="font-serif font-bold text-[#241510] text-base flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#C58940]" />
-                  Select Delivery City
-                </h4>
+      </header>
+
+
+      {/*
+        The delivery-area picker.
+
+        It used to live inside <header>, which has `backdrop-blur-md`. A
+        backdrop-filter makes an element a containing block for its
+        position: fixed descendants, so `inset-0` resolved against the header's
+        hundred-pixel box rather than the viewport: the dialog centred itself
+        inside the header, clipped its own top off, and sat across the logo.
+        Moving it out of the header is the whole fix.
+      */}
+      {isPincodeModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delivery-area-title"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-xs sm:items-center"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsPincodeModalOpen(false);
+          }}
+        >
+          {/* max-h + overflow so a long list of areas scrolls inside the card
+              instead of running off the screen on a short phone. */}
+          <div className="relative max-h-[85vh] w-full max-w-sm space-y-3 overflow-y-auto rounded-2xl border border-[#E8DFD8] bg-white p-5 text-[#241510] shadow-xl">
+            <div className="flex items-center justify-between border-b border-[#F0EAE1] pb-3">
+              <h4
+                id="delivery-area-title"
+                className="flex items-center gap-2 font-serif text-base font-bold text-[#241510]"
+              >
+                <MapPin className="h-4 w-4 text-[#C58940]" />
+                Where are we delivering?
+              </h4>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setIsPincodeModalOpen(false)}
+                className="rounded-full p-1 text-[#8C766B] hover:text-[#241510]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* The old copy promised temperature-controlled shipping across
+                India. The shop bakes in one city and delivers by its own rider;
+                the areas below are the ones it actually covers, set in Settings. */}
+            <p className="text-xs text-[#8C766B]">
+              We bake and deliver across {storeSettings.city}. Pick your area so we can
+              check we reach you.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              {storeSettings.deliveryAreas.map((area) => (
                 <button
-                  onClick={() => setIsPincodeModalOpen(false)}
-                  className="p-1 rounded-full text-[#8C766B] hover:text-[#241510]"
+                  key={`${area.name}-${area.pin}`}
+                  type="button"
+                  onClick={() => handleApplyPincode(area.name, area.pin)}
+                  className="rounded-xl border border-[#E8DFD8] bg-[#FAF7F2] p-2.5 text-left text-xs transition-colors hover:border-[#C58940] hover:bg-white"
                 >
-                  <X className="w-4 h-4" />
+                  <span className="block font-medium text-[#241510]">{area.name}</span>
+                  <span className="font-mono text-[10px] tabular-nums text-[#8C766B]">
+                    {area.pin}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="border-t border-[#F0EAE1] pt-2">
+              <label
+                htmlFor="delivery-pin-input"
+                className="mb-1 block text-[11px] font-medium text-[#8C766B]"
+              >
+                Somewhere else in {storeSettings.city}? Enter your 6-digit PIN
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="delivery-pin-input"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="380054"
+                  value={customPin}
+                  onChange={(e) => setCustomPin(e.target.value.replace(/\D/g, ''))}
+                  className="flex-1 rounded-lg border border-[#E8DFD8] bg-[#FAF7F2] px-3 py-1.5 font-mono text-xs tabular-nums text-[#241510] focus:border-[#241510] focus:outline-none"
+                />
+                <button
+                  type="button"
+                  disabled={customPin.length !== 6}
+                  onClick={() => handleApplyPincode(storeSettings.city, customPin)}
+                  className="rounded-lg bg-[#241510] px-3.5 py-1.5 text-xs font-medium text-white shadow-xs hover:bg-[#3D2317] disabled:opacity-40"
+                >
+                  Set
                 </button>
               </div>
-
-              <p className="text-xs text-[#8C766B]">
-                Shipped with temperature-controlled ice gel packs across India.
+              <p className="mt-1.5 text-[10px] text-[#A69286]">
+                Outside our area we will say so on WhatsApp before you pay.
               </p>
-
-              <div className="grid grid-cols-2 gap-2">
-                {indianCities.map((c) => (
-                  <button
-                    key={c.pin}
-                    onClick={() => handleApplyPincode(c.name, c.pin)}
-                    className="p-2.5 rounded-xl bg-[#FAF7F2] border border-[#E8DFD8] hover:border-[#C58940] hover:bg-white text-left text-xs transition-colors"
-                  >
-                    <span className="font-medium text-[#241510] block">{c.name}</span>
-                    <span className="text-[10px] font-mono text-[#8C766B]">{c.pin}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Custom PIN Code */}
-              <div className="pt-2 border-t border-[#F0EAE1]">
-                <label className="text-[11px] font-medium text-[#8C766B] block mb-1">Or enter 6-digit Indian PIN</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    placeholder="Enter 6-digit PIN"
-                    value={customPin}
-                    onChange={(e) => setCustomPin(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#E8DFD8] text-[#241510] text-xs font-mono focus:outline-none focus:border-[#241510]"
-                  />
-                  <button
-                    onClick={() => {
-                      if (customPin.length === 6) {
-                        handleApplyPincode('Express', customPin);
-                      }
-                    }}
-                    className="px-3.5 py-1.5 rounded-lg bg-[#241510] hover:bg-[#3D2317] text-white text-xs font-medium shadow-xs"
-                  >
-                    Set
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
-        )}
-      </header>
+        </div>
+      )}
 
       {/* Mobile tab bar. Heights are 56px with a 44px minimum touch area, and
           the bar pads itself past the iPhone home indicator. The Console tab

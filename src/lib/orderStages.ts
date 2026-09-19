@@ -31,8 +31,16 @@ export type StageActor = 'automatic' | 'customer' | 'staff' | 'admin';
 export interface StageDefinition {
   stage: OrderStage;
   label: string;
-  /** Shown in the admin timeline and on the customer's tracking page. */
+  /** Why this stage matters, for whoever is working the order. Staff-facing. */
   why: string;
+  /**
+   * The same moment, said to the customer.
+   *
+   * The tracking page used to print `why` straight at them, so a customer
+   * waiting on a cake read "The customer can now see the UPI details and pay"
+   * and "The money has been seen in the account. Admin only."
+   */
+  customerNote: string;
   actor: StageActor;
   /** Terminal stages accept no further transitions. */
   isTerminal: boolean;
@@ -58,6 +66,7 @@ export const STAGES: Record<OrderStage, StageDefinition> = {
     stage: 'inquiry_received',
     label: 'Inquiry Received',
     why: 'The order has arrived. Nothing is committed to the kitchen yet.',
+    customerNote: 'We have your order and will confirm it shortly.',
     actor: 'automatic',
     isTerminal: false,
     tone: 'neutral',
@@ -66,6 +75,7 @@ export const STAGES: Record<OrderStage, StageDefinition> = {
     stage: 'confirmed',
     label: 'Confirmed',
     why: 'Accepted by the kitchen. Ingredients and slot are committed.',
+    customerNote: 'Confirmed. We are getting everything ready to bake.',
     actor: 'staff',
     isTerminal: false,
     tone: 'neutral',
@@ -74,6 +84,7 @@ export const STAGES: Record<OrderStage, StageDefinition> = {
     stage: 'awaiting_payment',
     label: 'Awaiting Payment',
     why: 'The customer can now see the UPI details and pay.',
+    customerNote: 'Scan the code below to pay and confirm your order.',
     actor: 'staff',
     isTerminal: false,
     tone: 'waiting',
@@ -82,6 +93,7 @@ export const STAGES: Record<OrderStage, StageDefinition> = {
     stage: 'payment_verification_pending',
     label: 'Payment Verification Pending',
     why: 'The customer submitted a UPI reference. Check it against the bank.',
+    customerNote: 'We have your reference and are checking it with our bank.',
     actor: 'customer',
     isTerminal: false,
     tone: 'waiting',
@@ -90,22 +102,25 @@ export const STAGES: Record<OrderStage, StageDefinition> = {
     stage: 'paid',
     label: 'Paid',
     why: 'The money has been seen in the account. Admin only.',
+    customerNote: 'Payment received, thank you. Your order goes to the kitchen next.',
     actor: 'admin',
     isTerminal: false,
     tone: 'money',
   },
   baking: {
     stage: 'baking',
-    label: 'Baking & Tempering',
+    label: 'Baking',
     why: 'In production — cocoa tempered, batch baked fresh.',
+    customerNote: 'Being baked fresh for you right now.',
     actor: 'staff',
     isTerminal: false,
     tone: 'kitchen',
   },
   packed: {
     stage: 'packed',
-    label: 'Thermal Packed',
+    label: 'Packed',
     why: 'Sealed in a temperature-controlled pack, ready to hand over.',
+    customerNote: 'Baked and packed, ready to leave the kitchen.',
     actor: 'staff',
     isTerminal: false,
     tone: 'kitchen',
@@ -114,6 +129,7 @@ export const STAGES: Record<OrderStage, StageDefinition> = {
     stage: 'dispatched',
     label: 'Dispatched',
     why: 'Handed to the courier.',
+    customerNote: 'On its way to you.',
     actor: 'staff',
     isTerminal: false,
     tone: 'transit',
@@ -122,6 +138,7 @@ export const STAGES: Record<OrderStage, StageDefinition> = {
     stage: 'out_for_delivery',
     label: 'Out for Delivery',
     why: 'On the road, arriving today.',
+    customerNote: 'Out for delivery and arriving today.',
     actor: 'staff',
     isTerminal: false,
     tone: 'transit',
@@ -130,6 +147,7 @@ export const STAGES: Record<OrderStage, StageDefinition> = {
     stage: 'delivered',
     label: 'Delivered',
     why: 'Received by the customer. Handover complete.',
+    customerNote: 'Delivered. We hope you enjoy it.',
     actor: 'staff',
     isTerminal: true,
     tone: 'done',
@@ -138,6 +156,7 @@ export const STAGES: Record<OrderStage, StageDefinition> = {
     stage: 'cancelled',
     label: 'Cancelled',
     why: 'Called off. Refund handled separately if money was taken.',
+    customerNote: 'This order was cancelled. Message us if that is unexpected.',
     actor: 'staff',
     isTerminal: true,
     tone: 'stopped',

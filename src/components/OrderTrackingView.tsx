@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
+import { UpiPayPanel } from './UpiPayPanel';
 import { Order } from '../types';
 import { STAGES, getStageTrack } from '../lib/orderStages';
 import { formatRupees } from '../lib/pricing';
@@ -58,19 +59,7 @@ const PaymentPanel: React.FC<{ order: Order }> = ({ order }) => {
           </p>
         )}
 
-        {storeSettings.upiId ? (
-          <div className="rounded-lg border border-amber-300 bg-white px-3 py-2">
-            <span className="block text-[10px] uppercase tracking-[0.12em] text-[#8C766B]">Pay to UPI ID</span>
-            <span className="font-mono text-sm font-semibold text-[#241510]">{storeSettings.upiId}</span>
-            {storeSettings.upiAccountName && (
-              <span className="mt-0.5 block text-[11px] text-[#8C766B]">{storeSettings.upiAccountName}</span>
-            )}
-          </div>
-        ) : (
-          <p className="text-[11px] text-amber-900">
-            Payment details will be sent to you on WhatsApp.
-          </p>
-        )}
+        <UpiPayPanel amount={order.totalAmount} reference={order.orderNumber} />
 
         <p className="text-[11px] leading-relaxed text-amber-900">{storeSettings.paymentInstructions}</p>
 
@@ -307,7 +296,7 @@ export const OrderTrackingView: React.FC = () => {
               </div>
 
               <p className="text-xs leading-relaxed text-[#5C4033]">
-                {STAGES[currentOrder.stage].why}
+                {STAGES[currentOrder.stage].customerNote}
               </p>
 
               {isCancelled ? (

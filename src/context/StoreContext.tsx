@@ -93,7 +93,6 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
 
   upiId: '',
   upiAccountName: '',
-  upiQrImage: '',
   paymentInstructions:
     'Pay to the UPI ID above, then enter your 12-digit UPI reference number on the order page so we can verify it against our bank.',
 

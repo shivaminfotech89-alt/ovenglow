@@ -1,9 +1,68 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, MapPin, Plus, Save, X } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { buildUpiLink, buildUpiQrSvg, isPlausibleVpa } from '../../lib/upi';
 import { StoreSettings } from '../../types';
 import { ImageField } from './ImageField';
 import { Field, btnGhost, btnPrimary, inputClass, useToast } from './ui';
+
+/**
+ * A live preview of the code customers will scan.
+ *
+ * The shop cannot otherwise tell whether the id it typed is the one that works
+ * -- a UPI id is not verifiable by looking at it, and the first sign of a typo
+ * would be a customer saying their payment bounced. Scanning this with the
+ * shop's own phone, before saving, is the only real check: the payment app
+ * either shows the right account name or it does not.
+ *
+ * ₹1 deliberately, so the test costs a rupee rather than a real order's value.
+ */
+const UpiIdPreview: React.FC<{ upiId: string; accountName: string }> = ({ upiId, accountName }) => {
+  const valid = isPlausibleVpa(upiId);
+  const svg = useMemo(
+    () =>
+      valid
+        ? buildUpiQrSvg(
+            buildUpiLink({ payeeVpa: upiId, payeeName: accountName, amount: 1, note: 'Test' }),
+            132,
+          )
+        : '',
+    [valid, upiId, accountName],
+  );
+
+  if (!upiId.trim()) return null;
+
+  if (!valid) {
+    return (
+      <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[11px] text-amber-900 sm:col-span-2">
+        <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />
+        That does not look like a UPI ID. They are written{' '}
+        <span className="font-mono">name@bank</span>, for example{' '}
+        <span className="font-mono">ovenglow@okhdfcbank</span>.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-3 rounded-xl border border-[#E8DFD8] bg-[#FAF7F2] p-3 sm:col-span-2 sm:flex-row sm:items-center">
+      <div
+        className="shrink-0 rounded-lg border border-[#E8DFD8] bg-white p-1"
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+      <div className="text-[11px] leading-relaxed text-[#5C4033]">
+        <p className="font-semibold text-[#241510]">Test this before you save</p>
+        <p className="mt-0.5">
+          Scan it with your own phone. Your payment app should offer to send{' '}
+          <strong>₹1</strong> to <strong>{accountName}</strong>. If the name is wrong, or
+          nothing opens, the ID is wrong — and a customer would hit the same wall.
+        </p>
+        <p className="mt-1 text-[#8C766B]">
+          Customers get this same code with their order&rsquo;s real amount and number in it.
+        </p>
+      </div>
+    </div>
+  );
+};
 
 export const SettingsScreen: React.FC = () => {
   const { storeSettings, updateStoreSettings } = useStore();
@@ -145,13 +204,14 @@ export const SettingsScreen: React.FC = () => {
           <Field label="UPI account holder name">
             <input value={form.upiAccountName} onChange={(e) => set('upiAccountName', e.target.value)} className={inputClass} />
           </Field>
-          <ImageField
-            label="UPI QR image"
-            hint="Optional — upload a screenshot of your bank's QR code to show at checkout."
-            value={form.upiQrImage}
-            onChange={(upiQrImage) => set('upiQrImage', upiQrImage)}
-            className="sm:col-span-2"
-          />
+          {/*
+            The upload that used to be here is gone. A photograph of your bank's
+            QR is a fixed code: it cannot carry the amount or the order number,
+            so every customer types the amount themselves and you are left
+            matching payments to orders by eye. The code shown to customers is
+            now generated per order from the ID above, with both already in it.
+          */}
+          <UpiIdPreview upiId={form.upiId} accountName={form.upiAccountName || form.storeName} />
           <Field label="Payment instructions" hint="Shown to the customer at checkout." className="sm:col-span-2">
             <textarea
               rows={2}

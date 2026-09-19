@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../context/StoreContext';
+import { UpiPayPanel } from './UpiPayPanel';
 import { PaymentMethod, CustomerDetails, Order } from '../types';
 import confetti from 'canvas-confetti';
 import {
@@ -306,9 +307,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
                       {storeSettings.upiAccountName && (
                         <p className="text-[11px] text-[#8C766B]">Account name: {storeSettings.upiAccountName}</p>
                       )}
-                      {storeSettings.upiQrImage && (
-                        <img src={storeSettings.upiQrImage} alt="UPI QR code" className="mx-auto h-36 w-36 rounded-lg border border-[#E8DFD8] object-contain" />
-                      )}
+                      {/* No QR at this step on purpose. The order does not
+                          exist yet, so a code here could not carry an order
+                          number, and a payment the shop cannot match to an
+                          order is a payment it has to chase. The code appears
+                          the moment the order is placed. */}
+                      <p className="text-[11px] text-[#8C766B]">
+                        You will get a scannable code with the exact amount as soon as you
+                        place the order.
+                      </p>
                     </>
                   ) : (
                     <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
@@ -389,13 +396,28 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
                   </span>
                 </div>
 
+                {/* The moment a customer is most willing to pay is the moment
+                    they have just ordered. Sending them away to find payment
+                    details later loses orders; the code is here, with the
+                    amount and order number already in it. */}
+                {createdOrder.paymentMethod === 'UPI' && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-[#241510]">Pay now to confirm</p>
+                    <UpiPayPanel
+                      amount={createdOrder.totalAmount}
+                      reference={createdOrder.orderNumber}
+                      className="border-[#E8DFD8]"
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-1.5 text-xs text-[#5C4033]">
                   <p className="font-medium text-[#241510]">What happens next</p>
                   <ol className="list-inside list-decimal space-y-1 text-[11px]">
                     <li>Our kitchen confirms your order.</li>
                     {createdOrder.paymentMethod === 'UPI' ? (
                       <>
-                        <li>We send you payment details and you pay by UPI.</li>
+                        <li>You pay by UPI, with the code above or on the tracking page.</li>
                         <li>You enter your UPI reference on the tracking page.</li>
                         <li>We check it against our bank and mark the order paid.</li>
                         <li>Then we bake, pack and deliver.</li>

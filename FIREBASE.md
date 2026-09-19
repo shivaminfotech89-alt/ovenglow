@@ -41,9 +41,11 @@ paste one into a chat.
    toggle. (Leave "Email link" off.)
 4. **Authentication → Users → Add user.** Use an address listed in
    `PERMANENT_SUPER_ADMINS` in `src/lib/permissions.ts`, and set a password.
-5. Sign in at the shop's **Staff** tab. The first time, it will ask you to
-   confirm your email — see below.
-6. The catalogue, coupons, banners and default settings upload themselves the
+5. **Authentication → Sign-in method → Google.** Enable it, and check
+   your domain is under Settings → Authorised domains.
+6. Go to `/#staff` and sign in (see below). The storefront has no Staff
+   button by design.
+7. The catalogue, coupons, banners and default settings upload themselves the
    first time a Super Admin signs in to an empty database.
 
 ### Why it asks you to confirm your email
@@ -70,6 +72,46 @@ link again" button. It is a one-time step.
 
 A staff record works whether or not the address is confirmed, so this gets you
 in either way.
+
+## Getting into the admin
+
+The storefront does not advertise it. There is no Staff button in the
+navigation, none in the phone's tab bar, none in the footer — customers should
+not be shown a door that is not for them.
+
+Staff go to:
+
+```
+https://ovenglowdelights.com/#staff
+```
+
+`#admin`, `#console` and `#login` work too, because the spelling you remember in
+six months is not predictable. **Bookmark it.**
+
+Once signed in, a **Console** entry appears in the navigation and in the phone's
+tab bar, so you only need the address when you are signed out.
+
+This is housekeeping, not security. Anyone can type that address; the sign-in
+screen is what stops them going further, and `firestore.rules` is what stops
+them reading anything. Hiding the link protects nobody — it just keeps the
+storefront for customers.
+
+## Signing in
+
+**Use "Continue with Google"** with either owner address. A Google account
+arrives with its address already confirmed, and the rules only grant the owner
+addresses their Super Admin powers once the address is confirmed — so Google
+skips the verification email entirely.
+
+Both `shivaminfotech89@gmail.com` and `ovenglowdelights@gmail.com` work
+identically, with or without a staff record of their own. That is asserted in
+`scripts/rules.test.mjs`, not assumed.
+
+Email and password works too. A console-created account starts unconfirmed, so
+the first sign-in asks you to confirm before it will let you in.
+
+Google sign-in only works from a domain on Firebase's authorised list:
+**Authentication → Settings → Authorised domains.**
 
 ## Adding staff
 
@@ -98,7 +140,7 @@ number and the phone together (`src/lib/orderLookup.ts`).
 Edit `firestore.rules`, then:
 
 ```sh
-npm run rules:test     # 40 assertions against the real rules engine
+npm run rules:test     # 50 assertions against the real rules engine
 npm run rules:deploy   # needs `npx firebase login` first
 ```
 

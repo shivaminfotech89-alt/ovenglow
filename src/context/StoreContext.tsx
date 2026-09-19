@@ -224,6 +224,25 @@ async function nextOrderNumber(): Promise<string> {
 /** The storefront's top-level views. */
 export type AppTab = 'shop' | 'signature' | 'track' | 'admin';
 
+/**
+ * How staff reach the admin now that the storefront does not advertise it.
+ *
+ * The shop asked for the admin not to be shown to customers, so the Staff
+ * button is gone from the navigation, the phone's tab bar and the footer. That
+ * removes the only ways in, so the address becomes the way in:
+ *
+ *     https://ovenglowdelights.com/#staff
+ *
+ * Worth being clear about what this is and is not. It is not a secret and it is
+ * not security -- anyone can type it, and the sign-in screen is what stops them
+ * going further. What stops them reading anything is firestore.rules. This is
+ * housekeeping: customers should not be invited to a door that is not for them.
+ *
+ * Several spellings are accepted because the one a person remembers six months
+ * from now is not predictable.
+ */
+const ADMIN_HASHES = ['#staff', '#admin', '#console', '#login'];
+
 /** State that mirrors itself into localStorage on every change. */
 function usePersistentState<T>(key: string, fallback: T, onError?: (message: string) => void) {
   const [value, setValue] = useState<T>(() => {
@@ -528,6 +547,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const [activeTab, setActiveTab] = useState<AppTab>('shop');
+
+  // Open the admin when the address asks for it, on load and on any later
+  // change -- a bookmark, a typed address, or the back button.
+  useEffect(() => {
+    const apply = () => {
+      if (ADMIN_HASHES.includes(window.location.hash.toLowerCase())) setActiveTab('admin');
+    };
+    apply();
+    window.addEventListener('hashchange', apply);
+    return () => window.removeEventListener('hashchange', apply);
+  }, []);
+
+  // Keep the address in step, so the console can be bookmarked and a reload
+  // stays where it was. `replaceState` rather than assigning to the hash: the
+  // latter stacks a history entry on every tab change, which turns the back
+  // button into a tour of the whole site.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onAdminUrl = ADMIN_HASHES.includes(window.location.hash.toLowerCase());
+    const base = `${window.location.pathname}${window.location.search}`;
+    if (activeTab === 'admin' && !onAdminUrl) {
+      window.history.replaceState(null, '', `${base}#staff`);
+    } else if (activeTab !== 'admin' && onAdminUrl) {
+      window.history.replaceState(null, '', base);
+    }
+  }, [activeTab]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isVegOnly, setIsVegOnly] = useState<boolean>(false);

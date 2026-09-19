@@ -17,6 +17,13 @@ import {
 
 type MobileTabId = 'shop' | 'signature' | 'track' | 'account' | 'admin';
 
+/**
+ * What a customer sees along the bottom of a phone.
+ *
+ * Staff is deliberately absent. The shop asked for the admin not to be
+ * advertised on the storefront, and a customer has no use for it. Reaching it
+ * is covered below; a signed-in staff member gets a Console tab appended.
+ */
 const MOBILE_TABS: {
   id: MobileTabId;
   label: string;
@@ -26,8 +33,9 @@ const MOBILE_TABS: {
   { id: 'signature', label: 'Signature', icon: Sparkles },
   { id: 'track', label: 'Track', icon: Truck },
   { id: 'account', label: 'Account', icon: Phone },
-  { id: 'admin', label: 'Staff', icon: ShieldCheck },
 ];
+
+const CONSOLE_TAB = { id: 'admin' as MobileTabId, label: 'Console', icon: ShieldCheck };
 
 export const Navbar: React.FC = () => {
   const { 
@@ -211,9 +219,10 @@ export const Navbar: React.FC = () => {
                 <span>Track Order</span>
               </button>
 
-              {/* Staff entry. Always reachable: the sign-in screen is the gate,
-                  and hiding this button only locked staff out of it. */}
-              {(
+              {/* Not advertised to customers. Staff reach the sign-in screen
+                  by its own address (see ADMIN_HASH in StoreContext); once
+                  signed in, this is how they get back to it. */}
+              {currentStaff && (
                 <button
                   id="nav-btn-admin"
                   onClick={() => setActiveTab('admin')}
@@ -224,7 +233,7 @@ export const Navbar: React.FC = () => {
                   }`}
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="font-semibold">{currentStaff ? 'Console' : 'Staff'}</span>
+                  <span className="font-semibold">Console</span>
                 </button>
               )}
             </nav>
@@ -380,33 +389,21 @@ export const Navbar: React.FC = () => {
         )}
       </header>
 
-      {/* Elegant Native-Feeling Bottom Bar on Mobile */}
-      {/* Mobile tab bar.
-          Staff is a permanent tab: the desktop nav that carries it is hidden
-          below xl, and the old bar only showed Console once already signed in,
-          so on a phone there was no way to reach the admin login at all.
-          Heights are 56px with a 44px minimum touch area, and the bar pads
-          itself past the iPhone home indicator. */}
+      {/* Mobile tab bar. Heights are 56px with a 44px minimum touch area, and
+          the bar pads itself past the iPhone home indicator. The Console tab
+          appears only once someone is signed in. */}
       <nav
         aria-label="Primary"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-[#EBE3DA] bg-white/95 backdrop-blur-md shadow-[0_-4px_12px_rgba(0,0,0,0.04)] lg:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="flex items-stretch">
-          {MOBILE_TABS.map((tab) => {
+          {(currentStaff ? [...MOBILE_TABS, CONSOLE_TAB] : MOBILE_TABS).map((tab) => {
             const isActive =
               tab.id === 'account' ? false : activeTab === tab.id;
             const Icon = tab.icon;
             const label =
-              tab.id === 'account'
-                ? customerUser
-                  ? 'Account'
-                  : 'Sign In'
-                : tab.id === 'admin'
-                  ? currentStaff
-                    ? 'Console'
-                    : 'Staff'
-                  : tab.label;
+              tab.id === 'account' ? (customerUser ? 'Account' : 'Sign In') : tab.label;
 
             return (
               <button

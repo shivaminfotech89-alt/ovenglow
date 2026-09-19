@@ -197,7 +197,16 @@ service cloud.firestore {
      * nobody else's, after which the ordinary rule takes over.
      */
     match /staff/{uid} {
-      allow read: if signedIn();
+      // You may always read your own record -- that is how the app learns what
+      // role you have. Reading anyone else's, or listing the collection, is for
+      // staff only.
+      //
+      // This was `read: if signedIn()`, which was survivable while the only way
+      // to be signed in was a password the shop had handed out. Switching on
+      // Google sign-in turned "signed in" into "has a Gmail address", and with
+      // it every colleague's name, address and role became public to the world.
+      allow get: if signedIn() && (uid == request.auth.uid || isStaff());
+      allow list: if isStaff();
       allow write: if isSuperAdmin()
         || (isOwnerEmail() && uid == request.auth.uid);
     }

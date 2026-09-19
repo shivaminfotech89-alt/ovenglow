@@ -53,6 +53,7 @@ import {
   resetStaffPassword,
   sendVerification,
   signInStaff,
+  signInWithGoogle,
   signOutStaff,
   watchStaffAuth,
 } from '../lib/staffAuth';
@@ -346,6 +347,7 @@ interface StoreContextType {
   staff: StaffUser[];
   currentStaff: StaffUser | null;
   loginAsStaff: (email: string, password: string) => Promise<Result>;
+  loginAsStaffWithGoogle: () => Promise<Result>;
   logoutStaff: () => Promise<void>;
   addStaff: (name: string, email: string, role: StaffRole, password: string) => Promise<Result>;
   updateStaff: (id: string, updates: Partial<StaffUser>) => Promise<Result>;
@@ -419,8 +421,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const productsLive = useLiveCollection<Product>(COL.PRODUCTS);
   const couponsLive = useLiveCollection<Coupon>(COL.COUPONS);
   const bannersLive = useLiveCollection<Banner>(COL.BANNERS);
-  const ordersLive = useLiveCollection<Order>(COL.ORDERS, signedIn);
-  const staffLive = useLiveCollection<StaffUser>(COL.STAFF, signedIn);
+  /**
+   * The signed-in person's own staff record, read on its own.
+   *
+   * This used to come out of the full staff list, which meant the list had to
+   * be readable by anyone signed in -- and once Google sign-in was switched on,
+   * "anyone signed in" became anyone on earth with a Gmail address, who could
+   * then read every colleague's name, address and role.
+   *
+   * Reading one document by id breaks that: the rules can allow you your own
+   * record and nobody else's, and the list becomes staff-only.
+   */
+  const myStaffLive = useLiveDoc<StaffUser | null>(
+    COL.STAFF,
+    authUser?.uid ?? '',
+    null,
+    signedIn,
+  );
   const settingsLive = useLiveDoc<StoreSettings>(
     COL.SETTINGS,
     SETTINGS_DOC,
@@ -430,31 +447,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const products = productsLive.items;
   const coupons = couponsLive.items;
   const banners = bannersLive.items;
-  const orders = ordersLive.items;
-  const staff = staffLive.items;
   const storeSettings = settingsLive.value;
-
-  // Surface whichever read is failing, so a rules mistake shows up in the admin
-  // rather than only in the console.
-  useEffect(() => {
-    reportStorage(
-      productsLive.error ||
-        ordersLive.error ||
-        settingsLive.error ||
-        staffLive.error ||
-        couponsLive.error ||
-        bannersLive.error ||
-        '',
-    );
-  }, [
-    productsLive.error,
-    ordersLive.error,
-    settingsLive.error,
-    staffLive.error,
-    couponsLive.error,
-    bannersLive.error,
-    reportStorage,
-  ]);
 
   /**
    * The signed-in person as the admin understands them.
@@ -468,7 +461,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const currentStaff = useMemo<StaffUser | null>(() => {
     if (!authUser?.email) return null;
     const email = authUser.email.toLowerCase();
-    const record = staff.find((s) => s.id === authUser.uid || s.email.toLowerCase() === email);
+    const stored = myStaffLive.value;
+    const record = stored ? { ...stored, id: authUser.uid } : undefined;
     if (record) {
       if (!record.isActive && !isPermanentSuperAdmin(email)) return null;
       return isPermanentSuperAdmin(email) ? { ...record, role: 'super_admin' } : record;
@@ -482,9 +476,48 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isActive: true,
       addedAt: new Date().toISOString(),
     };
-  }, [authUser, staff]);
+  }, [authUser, myStaffLive.value]);
 
   const needsEmailVerification = signedIn && authUser?.emailVerified === false;
+
+  /**
+   * The reads that only staff are allowed.
+   *
+   * Gated on actually being staff rather than merely being signed in. With
+   * Google enabled anyone can reach Firebase Auth, and subscribing them to
+   * collections the rules will refuse would fill the console with permission
+   * errors on every visit -- the kind that teach people to ignore the console.
+   */
+  const isStaff = currentStaff !== null;
+  const ordersLive = useLiveCollection<Order>(COL.ORDERS, isStaff);
+  const staffLive = useLiveCollection<StaffUser>(COL.STAFF, isStaff);
+
+  const orders = ordersLive.items;
+  const staff = staffLive.items;
+
+  // Surface whichever read is failing, so a rules mistake shows up in the admin
+  // rather than only in the console.
+  useEffect(() => {
+    reportStorage(
+      productsLive.error ||
+        ordersLive.error ||
+        settingsLive.error ||
+        staffLive.error ||
+        myStaffLive.error ||
+        couponsLive.error ||
+        bannersLive.error ||
+        '',
+    );
+  }, [
+    productsLive.error,
+    ordersLive.error,
+    settingsLive.error,
+    staffLive.error,
+    myStaffLive.error,
+    couponsLive.error,
+    bannersLive.error,
+    reportStorage,
+  ]);
 
   /* ------------------------------------------------------ this browser only -- */
 
@@ -1145,6 +1178,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [],
   );
 
+  const loginAsStaffWithGoogle = useCallback(() => signInWithGoogle(), []);
+
   const logoutStaff = useCallback(async () => {
     await signOutStaff();
   }, []);
@@ -1430,6 +1465,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     staff,
     currentStaff,
     loginAsStaff,
+    loginAsStaffWithGoogle,
     logoutStaff,
     sendStaffPasswordReset,
     authReady,

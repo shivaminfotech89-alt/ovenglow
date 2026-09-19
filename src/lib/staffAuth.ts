@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import {
   Auth,
+  GoogleAuthProvider,
   User,
   connectAuthEmulator,
   createUserWithEmailAndPassword,
@@ -9,6 +10,7 @@ import {
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
 } from 'firebase/auth';
 import { USING_EMULATOR, app } from './firebase';
@@ -64,7 +66,16 @@ function explain(e: unknown): string {
     case 'auth/weak-password':
       return 'Use a password of at least six characters.';
     case 'auth/operation-not-allowed':
-      return 'Email sign-in is switched off in the Firebase console (Authentication → Sign-in method).';
+      return 'That sign-in method is switched off in the Firebase console (Authentication → Sign-in method).';
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return 'The Google window closed before sign-in finished.';
+    case 'auth/popup-blocked':
+      return 'Your browser blocked the Google window. Allow pop-ups for this site, or sign in with your email and password instead.';
+    case 'auth/unauthorized-domain':
+      return 'This web address is not on the Firebase authorised list (Authentication → Settings → Authorised domains).';
+    case 'auth/account-exists-with-different-credential':
+      return 'That address already has a password login here. Sign in with your email and password.';
     default:
       return 'Could not sign in. Please try again.';
   }
@@ -73,6 +84,34 @@ function explain(e: unknown): string {
 export async function signInStaff(email: string, password: string): Promise<Result> {
   try {
     await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+    return { success: true, message: 'Signed in.' };
+  } catch (e) {
+    return { success: false, message: explain(e) };
+  }
+}
+
+/**
+ * Sign in with Google.
+ *
+ * Useful here beyond convenience: a Google account arrives with
+ * `email_verified` already true, and the security rules only grant the two
+ * owner addresses their Super Admin powers once the address is verified. An
+ * account typed into the Firebase console by hand starts unverified and has to
+ * go through a confirmation email first; signing in with the Google account
+ * that owns the same address skips that entirely.
+ *
+ * Enabling Google does mean anyone with a Gmail address can now reach Firebase
+ * Auth and be "signed in". That grants nothing on its own -- every rule asks
+ * for an owner address or a `staff/{uid}` record, and a stranger has neither.
+ */
+export async function signInWithGoogle(): Promise<Result> {
+  const provider = new GoogleAuthProvider();
+  // Always ask which account, rather than silently reusing whichever Google
+  // account the browser happens to be signed into. A shop laptop may well have
+  // a personal account signed in already.
+  provider.setCustomParameters({ prompt: 'select_account' });
+  try {
+    await signInWithPopup(auth, provider);
     return { success: true, message: 'Signed in.' };
   } catch (e) {
     return { success: false, message: explain(e) };

@@ -98,17 +98,27 @@ export function useLiveDoc<T>(
   path: string,
   id: string,
   whenMissing: T,
+  enabled = true,
 ): { value: T; ready: boolean; error: string } {
   const [state, setState] = useState({ value: whenMissing, ready: false, error: '' });
 
   useEffect(() => {
+    if (!enabled || !id) {
+      setState({ value: whenMissing, ready: true, error: '' });
+      return;
+    }
+
     const stop = onSnapshot(
       doc(db, path, id),
       (snap) => {
         setState({
           // Merged rather than replaced: a settings document written before a
           // field existed should not leave that field undefined everywhere.
-          value: snap.exists() ? { ...whenMissing, ...(snap.data() as T) } : whenMissing,
+          // Spreading a null fallback is a no-op, which is what lets this be
+          // used for "the document, or null".
+          value: snap.exists()
+            ? ({ ...(whenMissing as object), ...(snap.data() as object) } as T)
+            : whenMissing,
           ready: true,
           error: '',
         });
@@ -123,7 +133,7 @@ export function useLiveDoc<T>(
     // `whenMissing` is a module-level constant at every call site; including it
     // would resubscribe on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path, id]);
+  }, [path, id, enabled]);
 
   return state;
 }

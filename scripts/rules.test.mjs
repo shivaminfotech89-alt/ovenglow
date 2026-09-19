@@ -242,6 +242,14 @@ await check('CANNOT make themselves staff', () =>
     })));
 await check('CANNOT reactivate a suspended account', () =>
   assertFails(updateDoc(doc(outsider, 'staff/suspended-uid'), { isActive: true })));
+// The boundary that Google sign-in moved: anyone with a Gmail address can now
+// be signed in, so "signed in" can no longer be what unlocks the staff list.
+await check('CANNOT list the staff', () =>
+  assertFails(getDocs(collection(outsider, 'staff'))));
+await check('CANNOT read a colleague\u2019s record', () =>
+  assertFails(getDoc(doc(outsider, 'staff/manager-uid'))));
+await check('can read their own (absent) record, which is how roles are looked up', () =>
+  assertSucceeds(getDoc(doc(outsider, 'staff/outsider-uid'))));
 
 section('An owner signing in for the first time');
 await check('can create their own staff record', () =>
@@ -269,6 +277,8 @@ await check('can change the shop settings', () =>
   assertSucceeds(updateDoc(doc(owner, 'settings/store'), { upiId: 'ovenglow@upi' })));
 await check('can list every order', () =>
   assertSucceeds(getDocs(collection(owner, 'orders'))));
+await check('can list the staff', () =>
+  assertSucceeds(getDocs(collection(owner, 'staff'))));
 
 section('An owner who has not verified their email');
 await check('CANNOT bootstrap themselves', () =>
@@ -284,6 +294,10 @@ await check('CANNOT edit the catalogue', () =>
 section('An order manager');
 await check('can list orders', () =>
   assertSucceeds(getDocs(collection(manager, 'orders'))));
+await check('can read their own record', () =>
+  assertSucceeds(getDoc(doc(manager, 'staff/manager-uid'))));
+await check('can list colleagues', () =>
+  assertSucceeds(getDocs(collection(manager, 'staff'))));
 await check('can move an order along', () =>
   assertSucceeds(
     updateDoc(doc(manager, 'orders/secret-order-id'), {

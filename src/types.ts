@@ -219,7 +219,17 @@ export interface StoreSettings {
   whatsappNumber: string;
   email: string;
   operatingHours: string;
+  /** The 14-digit FSSAI licence number. Displayed wherever it is set. */
   fssaiLicense: string;
+  /**
+   * The official FSSAI emblem, if the shop has the artwork on file.
+   *
+   * Left to a file rather than drawn in code: it is a government mark, and an
+   * approximation of an official emblem would be wrong in its details while
+   * still reading as official. Save the real one as `public/fssai-logo.png`
+   * and it appears; until then the licence number is shown on its own.
+   */
+  fssaiLogoUrl: string;
   gstin: string;
   /**
    * The shop's real logo. Drop a file at public/logo.png (or set any URL here in

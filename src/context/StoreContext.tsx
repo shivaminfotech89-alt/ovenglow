@@ -81,7 +81,9 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   whatsappNumber: '9824704877',
   email: 'ovenglowdelights@gmail.com',
   operatingHours: '10:00 AM – 11:00 PM, daily',
-  fssaiLicense: '',
+  fssaiLicense: '20725038003593',
+  // Rendered once the file exists; see FssaiMark.
+  fssaiLogoUrl: '/fssai-logo.png',
   gstin: '',
   // Served from public/logo.png when that file exists; the drawn mark is used
   // until then, and any other URL can be set from Settings.

@@ -107,3 +107,17 @@ export function localStorageBytesUsed(): number {
 
 /** Most browsers give an origin about 5 MB of localStorage. */
 export const STORAGE_BUDGET_BYTES = 5 * 1024 * 1024;
+
+/**
+ * The most a single photo may be, now that photos live in Firestore.
+ *
+ * Firestore caps one document at 1,048,576 bytes, and a photo is stored inline
+ * on the product alongside its name, description and everything else. 700KB
+ * leaves comfortable room for the rest; a 900px JPEG at the quality used here
+ * lands around 60-150KB, so this is a backstop for an unusual image rather than
+ * a limit anyone should meet.
+ *
+ * Without it an oversized photo fails at save time, with Firestore's own
+ * message about document size -- long after the upload appeared to work.
+ */
+export const MAX_PHOTO_BYTES = 700 * 1024;

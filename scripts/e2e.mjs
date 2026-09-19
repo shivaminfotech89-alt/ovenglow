@@ -360,6 +360,87 @@ check(
   await tracker.page.evaluate(() => /no order matches/i.test(document.body.innerText)),
 );
 
+/* ------------------------------------- checkout, driven the way a customer does */
+
+// Every order in this file until now was written straight to the database,
+// which is why a crash in the checkout screen itself went unnoticed: a hook
+// declared below `if (!isOpen) return null` changed the hook count when the
+// modal opened, and pressing "Proceed to checkout" blanked the whole page.
+// Nothing short of clicking the real buttons would have found it.
+await seedDoc('products/e2e-checkout', {
+  sku: { stringValue: 'E2E-CO' },
+  name: { stringValue: 'Checkout Test Brownie' },
+  tagline: { stringValue: 'For the test' },
+  description: { stringValue: 'Exists to be bought.' },
+  price: { integerValue: '250' },
+  originalPrice: { integerValue: '250' },
+  category: { stringValue: 'brownie-indulgence' },
+  image: { stringValue: '' },
+  secondaryImages: { arrayValue: { values: [] } },
+  isPublished: { booleanValue: true },
+  stockCount: { integerValue: '10' },
+  isVeg: { booleanValue: true },
+  rating: { integerValue: '5' },
+  reviewCount: { integerValue: '1' },
+  weightGrams: { integerValue: '200' },
+  shelfLife: { stringValue: '3 days' },
+  layers: { arrayValue: { values: [] } },
+  flavorNotes: { arrayValue: { values: [] } },
+});
+
+const buyer = await openContext('buyer');
+await buyer.page.waitForTimeout(2500);
+
+await buyer.page.locator('#btn-add-product-e2e-checkout').click();
+await buyer.page.waitForTimeout(900);
+
+// Adding must not take the screen away: the catalogue stays, and the card's
+// own stepper is what lets someone add a second and a third.
+check(
+  'adding to the bag does not hijack the page',
+  await buyer.page.evaluate(() => !document.querySelector('#cart-drawer-overlay')),
+);
+check(
+  'the card turns into a quantity stepper',
+  await buyer.page.locator('button[aria-label="Increase quantity"]').first().isVisible(),
+);
+
+await buyer.page.locator('button[aria-label="Increase quantity"]').first().click();
+await buyer.page.waitForTimeout(600);
+check(
+  'a second of the same item can be added without opening the bag',
+  await buyer.page.evaluate(() => !document.querySelector('#cart-drawer-overlay')),
+);
+
+await buyer.page.locator('#nav-btn-open-cart').click();
+await buyer.page.waitForTimeout(900);
+await buyer.page.locator('#btn-cart-proceed-checkout').click();
+await buyer.page.waitForTimeout(1200);
+
+check(
+  'proceeding to checkout opens the form instead of crashing',
+  await buyer.page.evaluate(() => document.body.innerText.trim().length > 0),
+  'the page went blank',
+);
+await buyer.page.screenshot({ path: `${SHOTS}/e2e-checkout-form.png` });
+
+await buyer.page.fill('input[name="name"], #checkout-name', 'Test Buyer').catch(async () => {
+  const boxes = buyer.page.locator('form input[type=text], form input:not([type])');
+  await boxes.nth(0).fill('Test Buyer');
+});
+const fills = [
+  ['phone', '9812345678'],
+  ['address', '4 Test Road'],
+  ['pincode', '380054'],
+];
+for (const [key, value] of fills) {
+  const box = buyer.page.locator(`input[name="${key}"], #checkout-${key}`).first();
+  if (await box.count()) await box.fill(value);
+}
+await buyer.page.screenshot({ path: `${SHOTS}/e2e-checkout-filled.png` });
+
+console.log(`\nbuyer console errors:    ${buyer.errors.length ? buyer.errors.slice(0, 4) : 'none'}`);
+
 console.log(`\nadmin console errors:    ${admin.errors.length ? admin.errors.slice(0, 4) : 'none'}`);
 console.log(`customer console errors: ${customer.errors.length ? customer.errors.slice(0, 4) : 'none'}`);
 console.log(`tracker console errors:  ${tracker.errors.length ? tracker.errors.slice(0, 4) : 'none'}`);

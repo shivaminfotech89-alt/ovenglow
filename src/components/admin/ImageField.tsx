@@ -3,6 +3,7 @@ import { ImagePlus, Link2, Loader2, Trash2, Upload } from 'lucide-react';
 import {
   CompressedImage,
   MAX_EDGE_PX,
+  MAX_PHOTO_BYTES,
   compressImageFile,
   dataUrlBytes,
   formatBytes,
@@ -50,6 +51,13 @@ export const ImageField: React.FC<ImageFieldProps> = ({
     setBusy(true);
     try {
       const result = await compressImageFile(file);
+      if (result.bytes > MAX_PHOTO_BYTES) {
+        setError(
+          `That photo is ${formatBytes(result.bytes)} even after resizing, and the limit is ` +
+            `${formatBytes(MAX_PHOTO_BYTES)}. Crop it, or paste a link to it instead.`,
+        );
+        return;
+      }
       setLastUpload(result);
       onChange(result.dataUrl);
     } catch (e) {

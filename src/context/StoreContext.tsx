@@ -320,6 +320,9 @@ interface StoreContextType {
   clearCart: () => void;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
+  /** Set briefly after an add, so the shop can confirm it without opening the bag. */
+  cartNotice: { name: string; at: number } | null;
+  dismissCartNotice: () => void;
   totals: OrderTotals;
 
   // Coupons
@@ -577,6 +580,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isVegOnly, setIsVegOnly] = useState<boolean>(false);
   const [deliveryPincode, setDeliveryPincode] = useState<string>('');
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  /** The last thing added, so the storefront can confirm it briefly. */
+  const [cartNotice, setCartNotice] = useState<{ name: string; at: number } | null>(null);
   const [isCustomerAuthOpen, setIsCustomerAuthOpen] = useState<boolean>(false);
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(null);
   const [isFindingOrder, setIsFindingOrder] = useState(false);
@@ -751,11 +756,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return [...prev, { product: live, quantity: capped, customMessage: note }];
       });
 
-      setIsCartOpen(true);
+      // The drawer used to fly open on every add, which made buying two things
+      // a fight: it covered the catalogue, and the card's own quantity stepper
+      // -- the thing that lets someone add three of something -- was hidden
+      // behind it. The card already shows "Added" and turns into a stepper, and
+      // the bag count rises, so the add is acknowledged without taking the
+      // screen away from someone who is still shopping.
+      setCartNotice({ name: live.name, at: Date.now() });
       return outcome;
     },
     [products, setCart],
   );
+
+  const dismissCartNotice = useCallback(() => setCartNotice(null), []);
 
   const removeFromCart = useCallback(
     (productId: string) => setCart((prev) => prev.filter((i) => i.product.id !== productId)),
@@ -1470,6 +1483,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     clearCart,
     isCartOpen,
     setIsCartOpen,
+    cartNotice,
+    dismissCartNotice,
     totals,
 
     coupons,

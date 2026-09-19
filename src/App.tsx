@@ -11,6 +11,7 @@ import { OrderTrackingView } from './components/OrderTrackingView';
 import { SignatureView } from './components/SignatureView';
 import { AdminApp } from './components/admin/AdminApp';
 import { CartDrawer } from './components/CartDrawer';
+import { CartNotice } from './components/CartNotice';
 import { CheckoutModal } from './components/CheckoutModal';
 import { CustomerAuthModal } from './components/CustomerAuthModal';
 import { ProductDetailModal } from './components/ProductDetailModal';
@@ -86,6 +87,8 @@ function AppContent() {
       </main>
 
       {/* Global Modals & Drawers */}
+      <CartNotice />
+
       <CartDrawer onProceedToCheckout={() => setIsCheckoutOpen(true)} />
 
       <CheckoutModal

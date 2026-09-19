@@ -17,17 +17,21 @@ interface FssaiMarkProps {
  * which is a regulatory claim the shop could not have evidenced. The number is
  * the claim; without it there is nothing to say.
  *
- * **The pictorial FSSAI logo is not drawn here.** It is a government mark, and
- * a hand-made approximation of an official emblem is worse than none -- it
- * would be wrong in the details and still read as official. So the artwork is
- * loaded from a file if one exists, and otherwise this falls back to the
- * typographic licence display that Indian packaging uses anyway: the word
- * FSSAI over "Lic. No." and the fourteen digits.
+ * **The emblem is a file, never drawn in code.** It is a government mark, and a
+ * hand-made approximation would be wrong in its details while still reading as
+ * official. `public/fssai-logo.png` holds the real artwork; if it is ever
+ * missing this falls back to the typographic licence display that Indian
+ * packaging uses anyway, rather than to an invented picture.
  *
- * To use the real emblem, download it from fssai.gov.in and save it as
- * `public/fssai-logo.png`. It then appears everywhere this component is used,
- * with no code change -- or point `storeSettings.fssaiLogoUrl` somewhere else
- * from Settings.
+ * **The emblem always sits on white**, in both tones. Its wordmark is navy on
+ * a saffron-and-green rule, which on the footer's dark brown is close to
+ * invisible -- and it is how the mark appears on every package it is printed
+ * on. The white panel is not decoration, it is legibility.
+ *
+ * Note the mark used is the plain FSSAI wordmark, not the fuller lockup that
+ * includes the State Emblem of India. The Ashoka pillar is separately
+ * restricted under the State Emblem of India (Prohibition of Improper Use)
+ * Act 2005, and a bakery has no business reproducing it.
  */
 export const FssaiMark: React.FC<FssaiMarkProps> = ({ tone = 'light', className = '' }) => {
   const { storeSettings } = useStore();
@@ -51,12 +55,16 @@ export const FssaiMark: React.FC<FssaiMarkProps> = ({ tone = 'light', className 
       className={`inline-flex items-center gap-2.5 rounded-xl border px-3 py-2 ${frame} ${className}`}
     >
       {useArtwork ? (
-        <img
-          src={artwork}
-          alt="FSSAI"
-          onError={() => setArtworkFailed(true)}
-          className="h-8 w-auto shrink-0 object-contain"
-        />
+        <span className="flex shrink-0 items-center rounded-md bg-white px-1.5 py-1">
+          <img
+            src={artwork}
+            alt="FSSAI"
+            width={460}
+            height={232}
+            onError={() => setArtworkFailed(true)}
+            className="h-7 w-auto object-contain"
+          />
+        </span>
       ) : (
         <span
           aria-hidden="true"

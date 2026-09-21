@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
-import { useStore } from '../context/StoreContext';
-import { 
-  X, 
-  Phone, 
-  User, 
-  ShieldCheck, 
-  CheckCircle2, 
-  ArrowRight, 
-  MapPin, 
-  LogOut, 
-  Package, 
-  Lock,
+import {
+  X,
+  Phone,
+  User,
+  MapPin,
+  LogOut,
+  Package,
+  Mail,
+  Loader2,
+  ShieldCheck,
 } from 'lucide-react';
+import { useStore } from '../context/StoreContext';
 
 interface CustomerAuthModalProps {
   isOpen: boolean;
@@ -20,206 +19,250 @@ interface CustomerAuthModalProps {
   messageNotice?: string;
 }
 
+/** The Google "G", drawn rather than loaded, so it needs no network request. */
+const GoogleMark: React.FC = () => (
+  <svg viewBox="0 0 48 48" className="h-4 w-4" aria-hidden="true">
+    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.7 9.5 24 9.5z" />
+    <path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.2-.4-4.6H24v9.1h12.4c-.5 2.9-2.2 5.4-4.7 7l7.6 5.9c4.4-4.1 6.8-10.1 6.8-17.4z" />
+    <path fill="#FBBC05" d="M10.4 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C.9 16.4 0 20.1 0 24s.9 7.6 2.6 10.8l7.8-6.1z" />
+    <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.8 2.3-8.3 2.3-6.3 0-11.7-3.7-13.6-9.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z" />
+  </svg>
+);
+
+/**
+ * Signing in, and the account behind it.
+ *
+ * What this replaces: a box that asked for a mobile number, believed it, wrote
+ * it to this browser and printed "Verified Customer" above it. Nothing was
+ * checked. That is why the old version could not show anyone their past orders
+ * -- a typed phone number is not proof, and building an order history on one
+ * would have meant handing a stranger somebody's address for the price of
+ * guessing their number.
+ *
+ * Google or an email and password are proof, and Firebase carries that proof
+ * into the security rules, so the order history below is the real thing: it
+ * survives signing out, and it follows the account onto a new phone.
+ *
+ * Signing in is never required to buy something. Checkout works for a guest
+ * exactly as it did, and their order is found with its number and their phone.
+ */
 export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  messageNotice
+  messageNotice,
 }) => {
-  const { 
-    customerUser, 
-    loginWithMobile, 
-    logoutCustomer, 
+  const {
+    customerUser,
+    isCustomerSignedIn,
+    signInCustomerWithGoogle,
+    signInCustomerWithEmail,
+    registerCustomer,
+    sendCustomerPasswordReset,
+    logoutCustomer,
     updateCustomerProfile,
+    myOrders,
     setActiveTab,
-    storeSettings
+    storeSettings,
   } = useStore();
 
-  const [phone, setPhone] = useState(customerUser?.phone || '');
-  const [name, setName] = useState(customerUser?.name || '');
-  const [address, setAddress] = useState(customerUser?.address || '');
-  const [pincode, setPincode] = useState(customerUser?.pincode || storeSettings.pincode);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [mode, setMode] = useState<'signin' | 'register'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState(customerUser?.phone ?? '');
+  const [name, setName] = useState(customerUser?.name ?? '');
+  const [address, setAddress] = useState(customerUser?.address ?? '');
+  const [pincode, setPincode] = useState(customerUser?.pincode ?? storeSettings.pincode);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   if (!isOpen) return null;
 
-
-  const handleDirectLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage(null);
-    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-
-    if (cleanPhone.length !== 10) {
-      setErrorMessage('Please enter a valid 10-digit mobile number');
-      return;
-    }
-    if (!name.trim()) {
-      setErrorMessage('Please enter your full name');
-      return;
-    }
-
-    const res = loginWithMobile(cleanPhone, name, address, pincode || storeSettings.pincode);
+  const run = async (work: () => Promise<{ success: boolean; message: string }>) => {
+    setBusy(true);
+    setNotice(null);
+    const res = await work();
+    setBusy(false);
     if (res.success) {
-      if (onSuccess) onSuccess();
+      onSuccess?.();
       onClose();
     } else {
-      setErrorMessage(res.message);
+      setNotice({ ok: false, text: res.message });
     }
   };
 
-  const handleSaveProfileUpdates = (e: React.FormEvent) => {
+  const submitEmailForm = (e: React.FormEvent) => {
     e.preventDefault();
-    if (customerUser) {
-      updateCustomerProfile({
-        name,
-        address,
-        pincode
+    if (mode === 'register') {
+      if (!name.trim()) {
+        setNotice({ ok: false, text: 'Please enter your name.' });
+        return;
+      }
+      void run(async () => {
+        const res = await registerCustomer(name, email, password);
+        if (res.success) await updateCustomerProfile({ name: name.trim() });
+        return res;
       });
-      setIsEditingProfile(false);
+      return;
     }
+    void run(() => signInCustomerWithEmail(email, password));
   };
+
+  const saveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    await updateCustomerProfile({ name, phone, address, pincode });
+    setBusy(false);
+    setIsEditingProfile(false);
+    setNotice({ ok: true, text: 'Saved to your account.' });
+  };
+
+  const fieldClass =
+    'w-full rounded-xl border border-[#E8DFD8] bg-white px-3.5 py-2.5 text-xs text-[#241510] placeholder:text-[#A69286] focus:border-[#241510] focus:outline-none';
 
   return (
-    <div 
+    <div
       id="customer-auth-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-xs sm:p-4"
       onClick={onClose}
     >
-      <div 
-        className="relative w-full max-w-md bg-[#FAF7F2] border border-[#E8DFD8] rounded-2xl shadow-2xl overflow-hidden"
+      <div
+        className="relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl border border-[#E8DFD8] bg-[#FAF7F2] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="p-4 sm:p-5 bg-white border-b border-[#E8DFD8] flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-[#E8DFD8] bg-white p-4 sm:p-5">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#241510] text-[#E5A93C] flex items-center justify-center font-serif font-bold text-base shadow-xs">
-              <Phone className="w-4 h-4" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#241510] text-[#E5A93C] shadow-xs">
+              <User className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="font-serif font-bold text-base text-[#241510]">
-                {customerUser ? 'Customer Account' : 'Customer Sign In'}
+              <h3 className="font-serif text-base font-bold text-[#241510]">
+                {isCustomerSignedIn ? 'Your account' : 'Sign in'}
               </h3>
               <p className="text-[11px] text-[#8C766B]">
-                {customerUser 
-                  ? 'Manage your confections delivery profile' 
-                  : `Direct mobile sign-in • ${storeSettings.city} delivery`}
+                {isCustomerSignedIn
+                  ? 'Your details and your orders'
+                  : 'So your orders and address are here next time'}
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-[#FAF7F2] text-[#8C766B] hover:text-[#241510] transition-colors"
+            aria-label="Close"
+            className="rounded-lg p-1.5 text-[#8C766B] transition-colors hover:bg-[#FAF7F2] hover:text-[#241510]"
           >
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Modal Content */}
-        <div className="p-4 sm:p-5 space-y-4">
-          
-          {messageNotice && !customerUser && (
-            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#C58940] shrink-0 mt-0.5" />
+        <div className="space-y-4 p-4 sm:p-5">
+          {messageNotice && !isCustomerSignedIn && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#C58940]" />
               <span>{messageNotice}</span>
             </div>
           )}
 
-          {customerUser ? (
-            /* VIEW A: LOGGED IN CUSTOMER DASHBOARD */
+          {notice && (
+            <p
+              className={`rounded-xl border px-3 py-2 text-[11px] ${
+                notice.ok
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-rose-200 bg-rose-50 text-rose-700'
+              }`}
+            >
+              {notice.text}
+            </p>
+          )}
+
+          {isCustomerSignedIn && customerUser ? (
             <div className="space-y-4">
-              <div className="p-3.5 rounded-xl bg-white border border-[#E8DFD8] shadow-xs space-y-3">
+              <div className="space-y-3 rounded-xl border border-[#E8DFD8] bg-white p-3.5 shadow-xs">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                      Verified Customer
-                    </span>
-                  </div>
+                  <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                    Signed in
+                  </span>
                   <button
                     onClick={() => setIsEditingProfile(!isEditingProfile)}
-                    className="text-xs text-[#C58940] hover:underline font-medium"
+                    className="text-xs font-medium text-[#C58940] hover:underline"
                   >
-                    {isEditingProfile ? 'Cancel Edit' : 'Edit Details'}
+                    {isEditingProfile ? 'Cancel' : 'Edit details'}
                   </button>
                 </div>
 
                 {!isEditingProfile ? (
                   <div className="space-y-1.5 text-xs text-[#5C4033]">
-                    <div className="flex items-center gap-2 font-bold text-sm text-[#241510]">
-                      <User className="w-3.5 h-3.5 text-[#C58940]" />
+                    <div className="flex items-center gap-2 text-sm font-bold text-[#241510]">
+                      <User className="h-3.5 w-3.5 text-[#C58940]" />
                       <span>{customerUser.name}</span>
                     </div>
+                    {customerUser.email && (
+                      <div className="flex items-center gap-2 break-all">
+                        <Mail className="h-3.5 w-3.5 shrink-0 text-[#8C766B]" />
+                        <span>{customerUser.email}</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 font-mono text-[#241510]">
-                      <Phone className="w-3.5 h-3.5 text-[#8C766B]" />
-                      <span>+91 {customerUser.phone}</span>
+                      <Phone className="h-3.5 w-3.5 text-[#8C766B]" />
+                      <span>{customerUser.phone ? `+91 ${customerUser.phone}` : 'No mobile yet'}</span>
                     </div>
                     {customerUser.address && (
-                      <div className="flex items-start gap-2 text-[#5C4033] pt-1">
-                        <MapPin className="w-3.5 h-3.5 text-[#8C766B] shrink-0 mt-0.5" />
-                        <span>{customerUser.address}, {customerUser.pincode || storeSettings.pincode} ({storeSettings.city})</span>
+                      <div className="flex items-start gap-2 pt-1">
+                        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#8C766B]" />
+                        <span>
+                          {customerUser.address}, {customerUser.pincode || storeSettings.pincode} (
+                          {customerUser.city || storeSettings.city})
+                        </span>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <form onSubmit={handleSaveProfileUpdates} className="space-y-3 pt-1">
-                    <div>
-                      <label className="text-[11px] font-medium text-[#5C4033] block mb-1">
-                        Full Name
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#E8DFD8] text-xs text-[#241510] focus:outline-none focus:border-[#241510]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-medium text-[#5C4033] block mb-1">
-                        Delivery Address
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="House/Apartment, Street, Area"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#E8DFD8] text-xs text-[#241510] focus:outline-none focus:border-[#241510]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-medium text-[#5C4033] block mb-1">
-                        {storeSettings.city} Pincode
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={storeSettings.pincode}
-                        value={pincode}
-                        onChange={(e) => setPincode(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#E8DFD8] text-xs font-mono text-[#241510] focus:outline-none focus:border-[#241510]"
-                      />
-                    </div>
+                  <form onSubmit={saveProfile} className="space-y-2.5 pt-1">
+                    <input
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Full name"
+                      className={fieldClass}
+                    />
+                    <input
+                      inputMode="numeric"
+                      maxLength={10}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Mobile number"
+                      className={`${fieldClass} font-mono`}
+                    />
+                    <input
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Flat / house no., street, area"
+                      className={fieldClass}
+                    />
+                    <input
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={pincode}
+                      onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                      placeholder={storeSettings.pincode || 'PIN code'}
+                      className={`${fieldClass} font-mono`}
+                    />
                     <button
                       type="submit"
-                      className="w-full py-2 rounded-lg bg-[#241510] text-white text-xs font-medium"
+                      disabled={busy}
+                      className="w-full rounded-xl bg-[#241510] py-2 text-xs font-medium text-white disabled:opacity-60"
                     >
-                      Save Profile Updates
+                      {busy ? 'Saving…' : 'Save to my account'}
                     </button>
                   </form>
                 )}
               </div>
 
-              {/*
-                This used to list the customer's past orders, read out of the
-                shared order array that every browser held a copy of. Listing
-                orders is now staff-only -- that array is what let anyone read
-                anyone's address -- and a phone number typed into this box is
-                not proof of anything, so it cannot be the key to an order
-                history. Tracking asks for the order number as well.
-              */}
               <button
                 type="button"
+                id="btn-account-orders"
                 onClick={() => {
                   setActiveTab('track');
                   onClose();
@@ -228,146 +271,121 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
               >
                 <span className="flex items-center gap-2">
                   <Package className="h-3.5 w-3.5 text-[#C58940]" />
-                  <span className="font-medium text-[#241510]">Track an order</span>
+                  <span className="font-medium text-[#241510]">Your orders</span>
                 </span>
-                <span className="text-[10px] text-[#8C766B]">Order number + this mobile</span>
+                <span className="text-[10px] tabular-nums text-[#8C766B]">
+                  {myOrders.length === 0
+                    ? 'None yet'
+                    : `${myOrders.length} order${myOrders.length === 1 ? '' : 's'}`}
+                </span>
               </button>
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setActiveTab('track');
-                    onClose();
-                  }}
-                  className="flex-1 py-2 px-3 rounded-xl bg-[#241510] hover:bg-[#3D2317] text-white text-xs font-medium flex items-center justify-center gap-1.5 shadow-xs transition-colors"
-                >
-                  <Package className="w-3.5 h-3.5" />
-                  <span>Track Delivery</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    logoutCustomer();
-                  }}
-                  className="py-2 px-3 rounded-xl bg-white hover:bg-rose-50 border border-[#E8DFD8] hover:border-rose-200 text-rose-700 text-xs font-medium flex items-center justify-center gap-1 transition-colors"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* VIEW B: DIRECT LOGIN (NO OTP REQUIRED) */
-            <form onSubmit={handleDirectLogin} className="space-y-3.5">
-              <div>
-                <label className="text-xs font-medium text-[#5C4033] block mb-1">
-                  Indian Mobile Number *
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#241510]">
-                    +91
-                  </span>
-                  <input
-                    type="tel"
-                    required
-                    maxLength={10}
-                    placeholder="98250 12345"
-                    value={phone}
-                    onChange={(e) => {
-                      setPhone(e.target.value.replace(/\D/g, ''));
-                      setErrorMessage(null);
-                    }}
-                    className="w-full pl-13 pr-3.5 py-2.5 rounded-xl bg-white border border-[#E8DFD8] focus:border-[#241510] text-[#241510] text-xs font-mono focus:outline-none placeholder:text-[#A69286]"
-                  />
-                </div>
-                <p className="text-[10px] text-[#8C766B] mt-1">
-                  Used by our kitchen and delivery rider to reach you about your order in {storeSettings.city}.
-                </p>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-[#5C4033] block mb-1">
-                  Your Full Name *
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-[#8C766B] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter your full name"
-                    value={name}
-                    onChange={(e) => {
-                      setName(e.target.value);
-                      setErrorMessage(null);
-                    }}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-white border border-[#E8DFD8] focus:border-[#241510] text-[#241510] text-xs focus:outline-none placeholder:text-[#A69286]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-[#5C4033] block mb-1">
-                  Delivery Address (Optional)
-                </label>
-                <div className="relative">
-                  <MapPin className="w-4 h-4 text-[#8C766B] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Flat / House No., Street, Area"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-white border border-[#E8DFD8] focus:border-[#241510] text-[#241510] text-xs focus:outline-none placeholder:text-[#A69286]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-[#5C4033] block mb-1">
-                  Pincode
-                </label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  placeholder={storeSettings.pincode || "Enter 6-digit PIN"}
-                  value={pincode}
-                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#E8DFD8] focus:border-[#241510] text-[#241510] text-xs font-mono focus:outline-none placeholder:text-[#A69286]"
-                />
-              </div>
-
-              {errorMessage && (
-                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
-                  {errorMessage}
-                </div>
-              )}
 
               <button
-                type="submit"
-                className="w-full py-2.5 px-4 rounded-xl bg-[#241510] hover:bg-[#3D2317] text-white text-xs font-medium flex items-center justify-center gap-2 shadow-xs transition-colors active:scale-98"
+                onClick={() => void logoutCustomer()}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[#E8DFD8] bg-white px-3 py-2 text-xs font-medium text-rose-700 transition-colors hover:border-rose-200 hover:bg-rose-50"
               >
-                <CheckCircle2 className="w-4 h-4 text-[#E5A93C]" />
-                <span>Sign In & Continue</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Sign out</span>
               </button>
-            </form>
+            </div>
+          ) : (
+            <div className="space-y-3.5">
+              <button
+                type="button"
+                id="btn-customer-google"
+                disabled={busy}
+                onClick={() => void run(signInCustomerWithGoogle)}
+                className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-[#E8DFD8] bg-white py-2.5 text-xs font-semibold text-[#241510] shadow-xs transition-colors hover:border-[#8C766B] disabled:opacity-60"
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleMark />}
+                Continue with Google
+              </button>
+
+              <div className="flex items-center gap-3">
+                <span className="h-px flex-1 bg-[#E8DFD8]" />
+                <span className="text-[10px] uppercase tracking-[0.12em] text-[#A69286]">or</span>
+                <span className="h-px flex-1 bg-[#E8DFD8]" />
+              </div>
+
+              <form onSubmit={submitEmailForm} className="space-y-2.5">
+                {mode === 'register' && (
+                  <input
+                    id="customer-name"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your full name"
+                    className={fieldClass}
+                  />
+                )}
+                <input
+                  id="customer-email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email address"
+                  className={fieldClass}
+                />
+                <input
+                  id="customer-password"
+                  type="password"
+                  required
+                  autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={mode === 'register' ? 'Choose a password' : 'Password'}
+                  className={fieldClass}
+                />
+                <button
+                  type="submit"
+                  id="btn-customer-email-submit"
+                  disabled={busy}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#241510] px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[#3D2317] disabled:opacity-60"
+                >
+                  {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {mode === 'register' ? 'Create my account' : 'Sign in'}
+                </button>
+              </form>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode(mode === 'signin' ? 'register' : 'signin');
+                    setNotice(null);
+                  }}
+                  className="font-medium text-[#C58940] hover:underline"
+                >
+                  {mode === 'signin' ? 'Create an account' : 'I already have an account'}
+                </button>
+
+                {mode === 'signin' && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const res = await sendCustomerPasswordReset(email);
+                      setNotice({ ok: res.success, text: res.message });
+                    }}
+                    className="text-[#8C766B] hover:text-[#241510] hover:underline"
+                  >
+                    Forgotten your password?
+                  </button>
+                )}
+              </div>
+
+              {/*
+                Said plainly, because the alternative is someone abandoning a
+                cake order at a sign-up form. An account is a convenience --
+                your address and your past orders kept for you -- not a gate.
+              */}
+              <p className="rounded-xl border border-[#E8DFD8] bg-white px-3 py-2 text-[11px] leading-relaxed text-[#6B574E]">
+                You do not need an account to order. Checkout works without one, and you can
+                track that order with its number and your mobile number.
+              </p>
+            </div>
           )}
-
-          {/* Discreet Staff Console Access Link at Bottom */}
-          <div className="pt-3 border-t border-[#E8DFD8] text-center">
-            <button
-              onClick={() => {
-                onClose();
-                setActiveTab('admin');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="text-[11px] text-[#8C766B] hover:text-[#C58940] transition-colors inline-flex items-center gap-1"
-            >
-              <Lock className="w-3 h-3" />
-              <span>Ovenglow Team Staff? Executive Admin Portal</span>
-            </button>
-          </div>
-
         </div>
       </div>
     </div>

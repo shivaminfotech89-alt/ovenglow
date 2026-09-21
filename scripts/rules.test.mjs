@@ -23,8 +23,10 @@ import {
   doc,
   getDoc,
   getDocs,
+  query,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
 
@@ -154,6 +156,28 @@ await env.withSecurityRulesDisabled(async (ctx) => {
     newOrder({ orderNumber: 'OG-20260918-001', totalAmount: 750, stage: 'awaiting_payment' }),
   );
   await setDoc(doc(db, 'orderLookup/hash-of-number-and-phone'), { orderId: 'secret-order-id' });
+
+  // For the customer-account cases below.
+  await setDoc(
+    doc(db, 'orders/guest-order-id'),
+    newOrder({ orderNumber: 'OG-20260918-003', customerUid: null }),
+  );
+  await setDoc(
+    doc(db, 'orders/outsider-order-id'),
+    newOrder({ orderNumber: 'OG-20260918-004', customerUid: 'outsider-uid' }),
+  );
+  await setDoc(
+    doc(db, 'orders/someone-elses-order-id'),
+    newOrder({ orderNumber: 'OG-20260918-005', customerUid: 'another-uid' }),
+  );
+  await setDoc(
+    doc(db, 'orders/unpaid-order-id'),
+    newOrder({
+      orderNumber: 'OG-20260918-006',
+      customerUid: 'outsider-uid',
+      stage: 'awaiting_payment',
+    }),
+  );
 });
 
 section('A stranger, not signed in');
@@ -341,6 +365,115 @@ await check('CANNOT rewrite what an order cost', () =>
       orderNumber: 'OG-20260918-001',
       totalAmount: 1,
     })));
+
+section('A customer with an account');
+
+/**
+ * The whole point of these: an order history is only safe if it is keyed on
+ * something the customer proved. Firebase's uid is that; a typed phone number
+ * is not, which is why the old "sign in" could not have one.
+ */
+await check('can save their own details', () =>
+  assertSucceeds(
+    setDoc(doc(outsider, 'customers/outsider-uid'), {
+      name: 'A Customer',
+      phone: '9812345678',
+      email: 'someone@example.com',
+      address: '4 Another Road',
+      city: 'Ahmedabad',
+      pincode: '380054',
+      updatedAt: '2026-09-21T10:00:00.000Z',
+    })));
+await check('can read their own details back', () =>
+  assertSucceeds(getDoc(doc(outsider, 'customers/outsider-uid'))));
+await check("CANNOT write somebody else's details", () =>
+  assertFails(
+    setDoc(doc(outsider, 'customers/another-uid'), {
+      name: 'Not Me',
+      phone: '9999999999',
+      email: 'x@example.com',
+      address: 'Somewhere',
+      city: 'Ahmedabad',
+      pincode: '380054',
+      updatedAt: '2026-09-21T10:00:00.000Z',
+    })));
+await check('CANNOT smuggle an extra field into their own record', () =>
+  assertFails(
+    setDoc(doc(outsider, 'customers/outsider-uid'), {
+      name: 'A Customer',
+      phone: '9812345678',
+      email: 'someone@example.com',
+      address: '4 Another Road',
+      city: 'Ahmedabad',
+      pincode: '380054',
+      updatedAt: '2026-09-21T10:00:00.000Z',
+      role: 'super_admin',
+    })));
+await check('CANNOT delete their record', () =>
+  assertFails(deleteDoc(doc(outsider, 'customers/outsider-uid'))));
+await check('can place an order stamped with their own uid', () =>
+  assertSucceeds(
+    addDoc(collection(outsider, 'orders'), newOrder({ customerUid: 'outsider-uid' }))));
+await check("CANNOT file an order under somebody else's account", () =>
+  assertFails(
+    addDoc(collection(outsider, 'orders'), newOrder({ customerUid: 'another-uid' }))));
+await check('can list their own orders', () =>
+  assertSucceeds(
+    getDocs(query(collection(outsider, 'orders'), where('customerUid', '==', 'outsider-uid')))));
+await check('CANNOT list every order', () =>
+  assertFails(getDocs(collection(outsider, 'orders'))));
+await check("CANNOT list somebody else's orders", () =>
+  assertFails(
+    getDocs(query(collection(outsider, 'orders'), where('customerUid', '==', 'another-uid')))));
+await check('can claim a guest order they just proved they own', () =>
+  assertSucceeds(
+    updateDoc(doc(outsider, 'orders/guest-order-id'), {
+      customerUid: 'outsider-uid',
+      updatedAt: '2026-09-21T10:00:00.000Z',
+    })));
+await check('CANNOT take an order off the customer it belongs to', () =>
+  assertFails(
+    updateDoc(doc(outsider, 'orders/someone-elses-order-id'), {
+      customerUid: 'outsider-uid',
+      updatedAt: '2026-09-21T10:00:00.000Z',
+    })));
+await check('CANNOT slip another change in while claiming', () =>
+  assertFails(
+    updateDoc(doc(outsider, 'orders/outsider-order-id'), {
+      customerUid: 'outsider-uid',
+      totalAmount: 1,
+    })));
+/**
+ * The rule here used to read `!signedIn()`, written when a customer could not
+ * be signed in at all. Left alone, it would have refused a customer their own
+ * payment reference the moment they had an account -- at the till, with the
+ * money already sent.
+ */
+await check('can submit a UPI reference while signed in', () =>
+  assertSucceeds(
+    updateDoc(doc(outsider, 'orders/unpaid-order-id'), {
+      payment: { method: 'UPI', upiReference: '123456789012' },
+      stage: 'payment_verification_pending',
+      stageHistory: [],
+      updatedAt: '2026-09-21T10:00:00.000Z',
+    })));
+await check('CANNOT mark their own payment verified', () =>
+  assertFails(
+    updateDoc(doc(outsider, 'orders/unpaid-order-id'), {
+      payment: { method: 'UPI', upiReference: '1', verifiedBy: 'me@example.com' },
+      stage: 'payment_verification_pending',
+      stageHistory: [],
+      updatedAt: '2026-09-21T10:00:00.000Z',
+    })));
+await check('a stranger can still order without an account', () =>
+  assertSucceeds(addDoc(collection(stranger, 'orders'), newOrder({ customerUid: null }))));
+await check('a stranger CANNOT claim an order for an account', () =>
+  assertFails(
+    updateDoc(doc(stranger, 'orders/guest-order-id'), { customerUid: 'outsider-uid' })));
+await check('staff can read a customer record', () =>
+  assertSucceeds(getDoc(doc(manager, 'customers/outsider-uid'))));
+await check('staff can still list every order', () =>
+  assertSucceeds(getDocs(collection(manager, 'orders'))));
 
 await env.cleanup();
 

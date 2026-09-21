@@ -175,12 +175,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-1 block text-xs font-medium text-[#5C4033]">Full name</span>
-                  <input value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} className={inputBase} />
+                  <input id="checkout-name" name="name" autoComplete="name" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} className={inputBase} />
                   {errors.name && <span className="mt-1 block text-[11px] text-rose-600">{errors.name}</span>}
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-medium text-[#5C4033]">Mobile number</span>
                   <input
+                    id="checkout-phone"
+                    name="phone"
+                    autoComplete="tel"
                     inputMode="numeric"
                     maxLength={10}
                     value={customer.phone}
@@ -194,6 +197,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-[#5C4033]">Delivery address</span>
                 <textarea
+                  id="checkout-address"
+                  name="address"
+                  autoComplete="street-address"
                   rows={2}
                   value={customer.address}
                   onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
@@ -205,11 +211,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-1 block text-xs font-medium text-[#5C4033]">City</span>
-                  <input value={customer.city} onChange={(e) => setCustomer({ ...customer, city: e.target.value })} className={inputBase} />
+                  <input id="checkout-city" name="city" autoComplete="address-level2" value={customer.city} onChange={(e) => setCustomer({ ...customer, city: e.target.value })} className={inputBase} />
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-medium text-[#5C4033]">PIN code</span>
                   <input
+                    id="checkout-pincode"
+                    name="pincode"
+                    autoComplete="postal-code"
                     inputMode="numeric"
                     maxLength={6}
                     value={customer.pincode}
@@ -230,7 +239,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
                 />
               </label>
 
-              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-full bg-[#241510] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#3D2317] sm:text-sm">
+              <button id="btn-checkout-continue" type="submit" className="flex w-full items-center justify-center gap-2 rounded-full bg-[#241510] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#3D2317] sm:text-sm">
                 Continue to payment <ArrowRight className="h-4 w-4" />
               </button>
             </form>
@@ -355,6 +364,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
                   Back
                 </button>
                 <button
+                  id="btn-place-order"
                   type="button"
                   disabled={isPlacing || cart.length === 0}
                   onClick={() => void placeOrder()}
@@ -438,6 +448,29 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
                   <span className="font-mono font-semibold text-[#241510]">{createdOrder.deliveryOtp}</span>{' '}
                   private. Read it out to the rider only when your order arrives.
                 </p>
+
+                {/* Asked at the one moment it is certain to be read. Someone
+                    who closes this screen without knowing how to come back
+                    will message the shop instead, which costs the shop a
+                    conversation for every order. */}
+                <p className="rounded-lg border border-[#E8DFD8] px-3 py-2 text-[11px] leading-relaxed text-[#5C4033]">
+                  <span className="font-medium text-[#241510]">Finding this again:</span>{' '}
+                  {customerUser?.uid ? (
+                    <>
+                      it is on your account. Open <span className="font-medium">Track</span> any
+                      time and it will be listed, on this phone or any other you sign in on.
+                    </>
+                  ) : (
+                    <>
+                      open <span className="font-medium">Track</span> and enter{' '}
+                      <span className="font-mono font-semibold text-[#241510]">
+                        {createdOrder.orderNumber}
+                      </span>{' '}
+                      with the mobile number you just gave us. Sign in and it will simply be
+                      listed there instead.
+                    </>
+                  )}
+                </p>
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -451,6 +484,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
                 </a>
                 <button
                   type="button"
+                  id="btn-track-my-order"
                   onClick={() => {
                     setStep('details');
                     setCreatedOrder(null);

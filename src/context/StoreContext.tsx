@@ -14,6 +14,7 @@ import {
   PaymentMethod,
   CustomerDetails,
   CustomerUser,
+  CustomerProfile,
   SalesReport,
   StaffUser,
   StoreSettings,
@@ -45,6 +46,7 @@ import {
   removeRecord,
   useLiveCollection,
   useLiveDoc,
+  useLiveWhere,
 } from '../lib/firestoreSync';
 import {
   User,
@@ -58,6 +60,14 @@ import {
   watchStaffAuth,
 } from '../lib/staffAuth';
 import { isUsablePhone, orderLookupKey } from '../lib/orderLookup';
+import { auth } from '../lib/staffAuth';
+import {
+  customerRegister,
+  customerResetPassword,
+  customerSignInWithEmail,
+  customerSignInWithGoogle,
+  customerSignOut,
+} from '../lib/customerAuth';
 import { db, startAnalytics } from '../lib/firebase';
 import {
   collection,
@@ -146,6 +156,7 @@ const COL = {
   STAFF: 'staff',
   SETTINGS: 'settings',
   ORDER_LOOKUP: 'orderLookup',
+  CUSTOMERS: 'customers',
 } as const;
 
 const SETTINGS_DOC = 'store';
@@ -171,17 +182,34 @@ function writeFailure(e: unknown, what: string): string {
   return `Could not ${what}. Please try again.`;
 }
 
-/** Firestore rejects `undefined`; the optional fields on Order are often that. */
-function stripForFirestore<T extends Record<string, unknown>>(value: T): T {
-  const out: Record<string, unknown> = {};
-  for (const [key, v] of Object.entries(value)) {
-    if (v === undefined) continue;
-    out[key] =
-      v && typeof v === 'object' && !Array.isArray(v) && (v as object).constructor === Object
-        ? stripForFirestore(v as Record<string, unknown>)
-        : v;
+/**
+ * Firestore rejects `undefined`; the optional fields on Order are often that.
+ *
+ * Arrays used to be passed through whole, on the reasoning that a hole in an
+ * array is data rather than an absent field. That reasoning was about an array
+ * of numbers, and the array that actually matters here is `items` -- a list of
+ * objects, each holding a product with optional fields. One of them,
+ * `customMessage`, is `undefined` on every item nobody wrote a message on,
+ * which is nearly every item ever bought.
+ *
+ * So `setDoc` threw "Unsupported field value: undefined" on the order write,
+ * and it threw for every order: the bag filled, checkout accepted the address,
+ * "Place order" reported a failure and nothing reached the database. Objects
+ * inside arrays are cleaned now.
+ */
+function stripForFirestore<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((entry) => stripForFirestore(entry)) as unknown as T;
   }
-  return out as T;
+  if (value && typeof value === 'object' && (value as object).constructor === Object) {
+    const out: Record<string, unknown> = {};
+    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v === undefined) continue;
+      out[key] = stripForFirestore(v);
+    }
+    return out as T;
+  }
+  return value;
 }
 
 /**
@@ -196,13 +224,20 @@ function stripForFirestore<T extends Record<string, unknown>>(value: T): T {
  * It is a label for talking to customers, not a key: the document id is what
  * identifies an order, and that is unique by construction.
  */
-async function nextOrderNumber(): Promise<string> {
+async function nextOrderNumber(canCount: boolean): Promise<string> {
   const today = new Date();
   const stamp = [
     today.getFullYear(),
     String(today.getMonth() + 1).padStart(2, '0'),
     String(today.getDate()).padStart(2, '0'),
   ].join('');
+
+  // Counting needs the same `list` permission a query does, which a customer
+  // does not have and never will. Trying anyway put a 403 in the console of
+  // every customer placing an order, and spent a round trip on the slowest step
+  // of the whole shop to be told no. So it is only attempted by staff, who are
+  // allowed; everyone else goes straight to the fallback.
+  if (!canCount) return timeBasedOrderNumber(stamp, today);
 
   try {
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
@@ -211,13 +246,23 @@ async function nextOrderNumber(): Promise<string> {
     );
     return `OG-${stamp}-${String(todaysOrders.data().count + 1).padStart(3, '0')}`;
   } catch (e) {
-    // An aggregate needs the same `list` permission a query does, which a
-    // customer does not have. Falling back to a time-based suffix keeps
-    // checkout working; the number stays unique enough to quote on WhatsApp.
     console.warn('Could not count today\u2019s orders; using a time-based number.', e);
-    const since = today.getHours() * 3600 + today.getMinutes() * 60 + today.getSeconds();
-    return `OG-${stamp}-${String(since % 1000).padStart(3, '0')}`;
+    return timeBasedOrderNumber(stamp, today);
   }
+}
+
+/**
+ * A number nobody counted: the second of the day, wrapped to three digits.
+ *
+ * Not sequential, and it does not need to be. What an order number is for is
+ * quoting on WhatsApp and matching a UPI payment, and for that it needs to be
+ * unique among the day's orders and short enough to read aloud. Two orders in
+ * the same second would collide; they would also be two orders in the same
+ * second, which this shop is some way from.
+ */
+function timeBasedOrderNumber(stamp: string, today: Date): string {
+  const since = today.getHours() * 3600 + today.getMinutes() * 60 + today.getSeconds();
+  return `OG-${stamp}-${String(since % 1000).padStart(3, '0')}`;
 }
 
 /** The storefront's top-level views. */
@@ -307,6 +352,8 @@ interface StoreContextType {
    * it was placed with, and it arrives here.
    */
   trackedOrder: Order | null;
+  /** Open an order already in hand, e.g. one picked from the account's history. */
+  showOrder: (order: Order) => void;
   findOrder: (orderNumber: string, phone: string) => Promise<Result>;
   clearTrackedOrder: () => void;
   /** True while findOrder is waiting on the database. */
@@ -357,12 +404,32 @@ interface StoreContextType {
   updateStoreSettings: (updates: Partial<StoreSettings>) => Promise<void>;
 
   // Customer session
+  /**
+   * Whoever the storefront is serving: a signed-in customer, or the details a
+   * guest typed at checkout. `uid` tells the two apart.
+   */
   customerUser: CustomerUser | null;
+  /** True only for a Firebase Auth session, which is the only kind that proves anything. */
+  isCustomerSignedIn: boolean;
+  signInCustomerWithGoogle: () => Promise<Result>;
+  signInCustomerWithEmail: (email: string, password: string) => Promise<Result>;
+  registerCustomer: (name: string, email: string, password: string) => Promise<Result>;
+  sendCustomerPasswordReset: (email: string) => Promise<Result>;
+  /** Remember a guest's details for the next order. Proves nothing; local only. */
   loginWithMobile: (phone: string, name?: string, address?: string, pincode?: string) => Result;
-  logoutCustomer: () => void;
-  updateCustomerProfile: (updates: Partial<CustomerUser>) => void;
+  logoutCustomer: () => Promise<void>;
+  updateCustomerProfile: (updates: Partial<CustomerUser>) => Promise<void>;
   isCustomerAuthOpen: boolean;
   setIsCustomerAuthOpen: (open: boolean) => void;
+
+  /** Every order this signed-in customer has placed, live. Empty for a guest. */
+  myOrders: Order[];
+  myOrdersReady: boolean;
+  /**
+   * Attach an order found by number and phone to the signed-in account, so it
+   * joins their history and they never have to type the number again.
+   */
+  claimOrder: (orderId: string) => Promise<Result>;
 
   // Staff session
   staff: StaffUser[];
@@ -465,6 +532,30 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     DEFAULT_STORE_SETTINGS,
   );
 
+  /**
+   * The signed-in customer's own profile and their own orders.
+   *
+   * Both are read by the same key -- the Firebase Auth uid -- and the security
+   * rules compare that key to the token rather than to anything the browser
+   * says. The orders subscription is a filtered query on purpose: `orders`
+   * cannot be listed by a customer at all, and the rule that lets them read
+   * their own only passes because the query itself carries
+   * `customerUid == <their uid>`. Reading the collection and filtering
+   * afterwards would be refused, which is the right outcome.
+   */
+  const myProfileLive = useLiveDoc<CustomerProfile | null>(
+    COL.CUSTOMERS,
+    authUser?.uid ?? '',
+    null,
+    signedIn,
+  );
+  const myOrdersLive = useLiveWhere<Order>(
+    COL.ORDERS,
+    'customerUid',
+    authUser?.uid ?? '',
+    signedIn,
+  );
+
   const products = productsLive.items;
   const coupons = couponsLive.items;
   const banners = bannersLive.items;
@@ -543,10 +634,47 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   /* ------------------------------------------------------ this browser only -- */
 
   const [cart, setCart] = usePersistentState<CartItem[]>(STORAGE_KEYS.CART, []);
-  const [customerUser, setCustomerUser] = usePersistentState<CustomerUser | null>(
+
+  /**
+   * The details a guest typed at checkout, kept so their next order pre-fills.
+   *
+   * This is all the old "customer sign in" ever was: a phone number typed into
+   * a box, stored here, and labelled "Verified Customer" on screen. It is
+   * genuinely useful for saving someone retyping their address, and genuinely
+   * worthless as proof of who they are -- so it can pre-fill a form and it can
+   * never unlock an order history.
+   */
+  const [guestProfile, setGuestProfile] = usePersistentState<CustomerUser | null>(
     STORAGE_KEYS.CUSTOMER,
     null,
   );
+
+  /**
+   * Who the storefront is serving.
+   *
+   * A signed-in customer wins over anything typed: their name, phone and
+   * address come from `customers/{uid}` in the database, so they follow the
+   * account onto a new phone. Where the profile has a gap -- a fresh Google
+   * account knows a name and an email but no phone -- the guest details fill
+   * it in, which saves a returning customer retyping what this browser already
+   * knows.
+   */
+  const customerUser = useMemo<CustomerUser | null>(() => {
+    if (!authUser) return guestProfile;
+    const profile = myProfileLive.value;
+    return {
+      uid: authUser.uid,
+      name: profile?.name || authUser.displayName || guestProfile?.name || 'Customer',
+      phone: profile?.phone || guestProfile?.phone || '',
+      email: profile?.email || authUser.email || '',
+      address: profile?.address || guestProfile?.address || '',
+      city: profile?.city || guestProfile?.city || '',
+      pincode: profile?.pincode || guestProfile?.pincode || '',
+      loggedInAt: profile?.updatedAt ?? new Date().toISOString(),
+    };
+  }, [authUser, myProfileLive.value, guestProfile]);
+
+  const isCustomerSignedIn = authUser !== null;
 
   const [activeTab, setActiveTab] = useState<AppTab>('shop');
 
@@ -864,6 +992,149 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await removeRecord(COL.BANNERS, id);
   }, []);
 
+  /* -------------------------------------------------- customer sessions -- */
+
+  /**
+   * Remember a guest's details on this device.
+   *
+   * Still called from checkout, and still worth doing -- retyping an address
+   * every time is the reason people abandon a second order. What it no longer
+   * does is pretend to be a sign-in. It writes to this browser and nowhere
+   * else, it grants nothing, and it is not what any order history is keyed on.
+   */
+  const loginWithMobile = useCallback(
+    (phone: string, name?: string, address?: string, pincode?: string): Result => {
+      const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+      if (cleanPhone.length !== 10) {
+        return { success: false, message: 'Please enter a valid 10-digit Indian mobile number.' };
+      }
+      const customer: CustomerUser = {
+        phone: cleanPhone,
+        name: name?.trim() || `Customer +91 ${cleanPhone.slice(0, 5)}`,
+        address: address ?? '',
+        pincode: pincode ?? '',
+        city: storeSettings.city,
+        loggedInAt: new Date().toISOString(),
+      };
+      setGuestProfile(customer);
+      return { success: true, message: `Welcome, ${customer.name}.` };
+    },
+    [storeSettings.city, setGuestProfile],
+  );
+
+  /**
+   * Save the customer's details to their account.
+   *
+   * Written to `customers/{uid}`, so the address is there on their next phone
+   * as well as this one. A guest has no uid and nowhere to write to, so their
+   * details stay in this browser exactly as before.
+   */
+  const updateCustomerProfile = useCallback(
+    async (updates: Partial<CustomerUser>): Promise<void> => {
+      // `auth.currentUser` rather than the `authUser` in React state, because
+      // this is called immediately after signing in -- from the sign-up form,
+      // to save the name that was just typed -- and React has not necessarily
+      // re-rendered with the new user yet. Reading the stale state meant the
+      // name was written to this browser instead of to the account, and the
+      // greeting said "Customer" until the page was reloaded.
+      const authUser = auth.currentUser;
+      if (!authUser) {
+        setGuestProfile((prev) => (prev ? { ...prev, ...updates } : null));
+        return;
+      }
+      const profile = myProfileLive.value;
+      const next: CustomerProfile = {
+        name: updates.name ?? profile?.name ?? authUser.displayName ?? '',
+        phone: (updates.phone ?? profile?.phone ?? '').replace(/\D/g, '').slice(-10),
+        email: updates.email ?? profile?.email ?? authUser.email ?? '',
+        address: updates.address ?? profile?.address ?? '',
+        city: updates.city ?? profile?.city ?? storeSettings.city,
+        pincode: updates.pincode ?? profile?.pincode ?? '',
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        await setDoc(doc(db, COL.CUSTOMERS, authUser.uid), next, { merge: true });
+      } catch (e) {
+        console.error('Could not save the customer profile:', e);
+      }
+      // Kept in this browser too, so the next checkout pre-fills instantly
+      // rather than waiting on a round trip.
+      setGuestProfile({ ...next, uid: authUser.uid, loggedInAt: next.updatedAt });
+    },
+    [myProfileLive.value, storeSettings.city, setGuestProfile],
+  );
+
+  const signInCustomerWithGoogle = useCallback(() => customerSignInWithGoogle(), []);
+  const signInCustomerWithEmail = useCallback(
+    (email: string, password: string) => customerSignInWithEmail(email, password),
+    [],
+  );
+  const registerCustomer = useCallback(
+    (name: string, email: string, password: string) => customerRegister(name, email, password),
+    [],
+  );
+  const sendCustomerPasswordReset = useCallback(
+    (email: string) => customerResetPassword(email),
+    [],
+  );
+
+  /**
+   * Sign out.
+   *
+   * The Firebase session goes, and so does the copy of the details in this
+   * browser -- otherwise signing out on a shared phone would leave the next
+   * person a pre-filled name and home address. What survives is in
+   * `customers/{uid}`, which is the point: signing back in brings it all back,
+   * on this device or any other.
+   */
+  const logoutCustomer = useCallback(async (): Promise<void> => {
+    setGuestProfile(null);
+    setTrackedOrder(null);
+    if (authUser) await customerSignOut();
+  }, [authUser, setGuestProfile]);
+
+  /**
+   * Attach a guest order to the signed-in account.
+   *
+   * Offered after a successful number-and-phone lookup, and that is what makes
+   * it safe: reaching this point already required both halves, which is the
+   * same bar as reading the order in the first place. Claiming grants no access
+   * that the customer did not just demonstrate -- it only saves them proving it
+   * again every time.
+   *
+   * The rule allows it only on an order that has no owner yet, and only to set
+   * that one field to the caller's own uid.
+   */
+  const claimOrder = useCallback(
+    async (orderId: string): Promise<Result> => {
+      if (!authUser) return { success: false, message: 'Sign in first.' };
+      try {
+        await setDoc(
+          doc(db, COL.ORDERS, orderId),
+          { customerUid: authUser.uid, updatedAt: new Date().toISOString() },
+          { merge: true },
+        );
+        return { success: true, message: 'Saved to your account.' };
+      } catch (e) {
+        return { success: false, message: writeFailure(e, 'save that order to your account') };
+      }
+    },
+    [authUser],
+  );
+
+  /**
+   * This customer's orders, newest first.
+   *
+   * Sorted here rather than in the query: pairing a `where` with an `orderBy`
+   * on another field needs a composite index deployed to the project before it
+   * will run at all, and a customer's order list is short enough that sorting
+   * a handful of rows in the browser costs nothing.
+   */
+  const myOrders = useMemo(
+    () => [...myOrdersLive.items].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [myOrdersLive.items],
+  );
+
   /* ------------------------------------------------------------- orders -- */
 
   const createOrder = useCallback(
@@ -886,7 +1157,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // Numbering off `orders` only worked when this device could see every
         // order, which a customer's phone cannot. Counting today's orders in
         // the database keeps the human-readable number sequential.
-        orderNumber: await nextOrderNumber(),
+        orderNumber: await nextOrderNumber(isStaff),
+        // Stamped when the customer is signed in, which is the whole of their
+        // order history: the rules let them list `orders` where this equals the
+        // uid in their token, and nothing wider. A guest gets null and keeps
+        // the order-number-and-phone route.
+        customerUid: authUser?.uid ?? null,
         customer,
         items: [...cart],
         itemTotal: totals.itemTotal,
@@ -944,9 +1220,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCart([]);
       setActiveCouponCode(null);
       setTrackedOrder(order);
+      // The address this order was delivered to is the one to offer next time,
+      // for a signed-in customer on any device and for a guest on this one.
+      void updateCustomerProfile({
+        name: customer.name,
+        phone: customer.phone,
+        email: customer.email,
+        address: customer.address,
+        city: customer.city,
+        pincode: customer.pincode,
+      });
       return order;
     },
-    [cart, totals, activeCoupon, storeSettings.phone],
+    [cart, totals, activeCoupon, storeSettings.phone, authUser, isStaff, updateCustomerProfile],
   );
 
   /**
@@ -1184,36 +1470,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const clearTrackedOrder = useCallback(() => setTrackedOrder(null), []);
+  const showOrder = useCallback((order: Order) => setTrackedOrder(order), []);
 
-  /* -------------------------------------------------- customer sessions -- */
-
-  const loginWithMobile = useCallback(
-    (phone: string, name?: string, address?: string, pincode?: string): Result => {
-      const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-      if (cleanPhone.length !== 10) {
-        return { success: false, message: 'Please enter a valid 10-digit Indian mobile number.' };
-      }
-      const customer: CustomerUser = {
-        phone: cleanPhone,
-        name: name?.trim() || `Customer +91 ${cleanPhone.slice(0, 5)}`,
-        address: address ?? '',
-        pincode: pincode ?? '',
-        city: storeSettings.city,
-        loggedInAt: new Date().toISOString(),
-      };
-      setCustomerUser(customer);
-      return { success: true, message: `Welcome, ${customer.name}.` };
-    },
-    [storeSettings.city, setCustomerUser],
-  );
-
-  const logoutCustomer = useCallback(() => setCustomerUser(null), [setCustomerUser]);
-
-  const updateCustomerProfile = useCallback(
-    (updates: Partial<CustomerUser>) =>
-      setCustomerUser((prev) => (prev ? { ...prev, ...updates } : null)),
-    [setCustomerUser],
-  );
+  /**
+   * An order on screen belongs to whoever was signed in when it was opened.
+   *
+   * Signing out already cleared it -- and it came straight back, because the
+   * tracking page reselects the newest order on the account and React ran that
+   * before the order list had emptied. The result was the previous person's
+   * name, address and handover PIN still on screen under a navigation bar that
+   * said "Sign In". Watching the uid itself closes that window: whenever the
+   * signed-in person changes, in either direction, the screen is cleared.
+   */
+  const lastUid = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const uid = authUser?.uid ?? null;
+    if (lastUid.current !== undefined && lastUid.current !== uid) setTrackedOrder(null);
+    lastUid.current = uid;
+  }, [authUser?.uid]);
 
   /* ----------------------------------------------------- staff sessions -- */
 
@@ -1474,6 +1748,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     trackedOrder,
     findOrder,
     clearTrackedOrder,
+    showOrder,
     isFindingOrder,
 
     cart,
@@ -1515,9 +1790,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updateStoreSettings,
 
     customerUser,
+    isCustomerSignedIn,
+    signInCustomerWithGoogle,
+    signInCustomerWithEmail,
+    registerCustomer,
+    sendCustomerPasswordReset,
     loginWithMobile,
     logoutCustomer,
     updateCustomerProfile,
+    myOrders,
+    myOrdersReady: myOrdersLive.ready,
+    claimOrder,
     isCustomerAuthOpen,
     setIsCustomerAuthOpen,
 

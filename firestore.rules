@@ -14,12 +14,13 @@ rules_version = '2';
  *   The catalogue, the banners and the shop's public settings are readable by
  *   the world and writable only by signed-in staff.
  *
- *   Orders can be CREATED by anyone — a customer placing an order is not signed
- *   in — but the list of orders is staff-only, so nobody can sweep up the
- *   customer base. A single order is readable by anyone holding its document
- *   id, which is a random 20-character Firestore id that is never displayed and
- *   cannot be guessed. Customers reach their own order through `orderLookup`
- *   (see below) and staff reach every order by querying.
+ *   Orders can be CREATED by anyone — a customer placing an order need not be
+ *   signed in — but a query over orders returns either everything (staff) or
+ *   only the orders stamped with the caller's own uid (a signed-in customer).
+ *   Nobody can sweep up the customer base. A single order is readable by anyone
+ *   holding its document id, which is a random 20-character Firestore id that
+ *   is never displayed and cannot be guessed; a guest reaches their own through
+ *   `orderLookup` (see below).
  *
  *   Once an order is placed the customer cannot change it. Only staff move an
  *   order through its stages, with one exception: submitting a UPI payment
@@ -121,7 +122,15 @@ service cloud.firestore {
      */
     match /orders/{orderId} {
       allow get: if true;
-      allow list: if isStaff();
+
+      // Staff query the lot. A signed-in customer may query their own, and only
+      // their own: the rule is evaluated against each document a query could
+      // return, so it passes only for a query that carries
+      // `where('customerUid', '==', <their own uid>)`. A query without that
+      // filter is refused outright rather than silently trimmed, which is why
+      // the filter belongs in the query and not in the app.
+      allow list: if isStaff()
+        || (signedIn() && resource.data.customerUid == request.auth.uid);
 
       // Anyone may place an order, because a customer at checkout is not
       // signed in. The guards stop one arriving already advanced: every real
@@ -134,7 +143,13 @@ service cloud.firestore {
         && request.resource.data.totalAmount is number
         && request.resource.data.totalAmount >= 0
         && !('verifiedBy' in request.resource.data.payment)
-        && !('verifiedAt' in request.resource.data.payment);
+        && !('verifiedAt' in request.resource.data.payment)
+        // An order may be stamped with the uid of whoever placed it, and that
+        // has to be their own: otherwise anyone could file their order under
+        // someone else's account, or worse, quietly claim to be its owner.
+        && (!('customerUid' in request.resource.data)
+            || request.resource.data.customerUid == null
+            || (signedIn() && request.resource.data.customerUid == request.auth.uid));
 
       // Staff move orders through their stages.
       allow update: if isStaff()
@@ -143,10 +158,16 @@ service cloud.firestore {
         && request.resource.data.totalAmount == resource.data.totalAmount;
 
       // A customer pays by UPI and types the reference on the tracking page, so
-      // that one field has to be writable by someone who is not signed in. It
-      // is allowed only while the order is still awaiting payment, and only
-      // that field and the stage that follows from it may change.
-      allow update: if !signedIn()
+      // that one field has to be writable by a customer. It is allowed only
+      // while the order is still awaiting payment, and only that field and the
+      // stage that follows from it may change.
+      //
+      // The test is "not staff" rather than "not signed in", which it was while
+      // a customer could not be signed in at all. Once customers have accounts,
+      // `!signedIn()` would have refused a paying customer their own payment
+      // reference the moment they signed in -- the most expensive possible
+      // moment to meet a permission error.
+      allow update: if !isStaff()
         && resource.data.stage in ['awaiting_payment', 'payment_verification_pending']
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['payment', 'stage', 'stageHistory', 'updatedAt'])
@@ -157,6 +178,24 @@ service cloud.firestore {
         && !('verifiedAt' in request.resource.data.payment)
         && request.resource.data.orderNumber == resource.data.orderNumber
         && request.resource.data.totalAmount == resource.data.totalAmount;
+
+      // Claiming an order that has no owner yet, so it joins the signed-in
+      // customer's history.
+      //
+      // This is offered only after a successful lookup by order number and
+      // phone number, and it grants nothing that lookup did not: whoever got
+      // this far already had both halves, which is the same bar as reading the
+      // order. Only the one field may change, only from nothing, and only to
+      // the caller's own uid -- so an order cannot be taken off the customer it
+      // belongs to.
+      allow update: if signedIn()
+        && !isStaff()
+        // Absent on orders placed before accounts existed; null on guest orders
+        // placed since. Either way it has no owner.
+        && (!('customerUid' in resource.data) || resource.data.customerUid == null)
+        && request.resource.data.diff(resource.data)
+             .affectedKeys().hasOnly(['customerUid', 'updatedAt'])
+        && request.resource.data.customerUid == request.auth.uid;
 
       // Orders are the shop's record of its own trade. Cancelling sets a stage;
       // it does not remove the row.
@@ -182,6 +221,32 @@ service cloud.firestore {
       allow create: if request.resource.data.keys().hasOnly(['orderId'])
         && request.resource.data.orderId is string;
       allow update, delete: if isStaff();
+    }
+
+    /* ---------------------------------------------------------- customers -- */
+
+    /**
+     * A customer's own name, phone, address and PIN code, at `customers/{uid}`.
+     *
+     * It exists so that an address typed on a phone is still there on a laptop,
+     * and so that "sign out, sign back in" returns someone to their own
+     * details. The uid in the path is the uid in the caller's token, so the
+     * rule is simply: your own record, nobody else's.
+     *
+     * Staff may read it, because an order arrives with a delivery address and
+     * the shop has to be able to see who it is for. Nobody may delete it from
+     * here -- an account's history is not something a form should be able to
+     * erase in passing.
+     */
+    match /customers/{uid} {
+      allow get: if signedIn() && (uid == request.auth.uid || isStaff());
+      allow list: if isStaff();
+      allow create, update: if signedIn()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+             'name', 'phone', 'email', 'address', 'city', 'pincode', 'updatedAt'
+           ]);
+      allow delete: if false;
     }
 
     /* -------------------------------------------------------------- staff -- */

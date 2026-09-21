@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { UpiPayPanel } from './UpiPayPanel';
 import { Order } from '../types';
@@ -122,6 +122,11 @@ const PaymentPanel: React.FC<{ order: Order }> = ({ order }) => {
 export const OrderTrackingView: React.FC = () => {
   const {
     customerUser,
+    isCustomerSignedIn,
+    myOrders,
+    claimOrder,
+    showOrder,
+    setIsCustomerAuthOpen,
     trackedOrder,
     findOrder,
     isFindingOrder,
@@ -135,11 +140,37 @@ export const OrderTrackingView: React.FC = () => {
   const [phone, setPhone] = useState(customerUser?.phone ?? '');
   const [notFound, setNotFound] = useState<string | null>(null);
   const [copiedOtp, setCopiedOtp] = useState(false);
+  const [claimNote, setClaimNote] = useState<string | null>(null);
+  // Someone signed in with orders already has their list; the lookup form is
+  // for the order that is not on it, so it starts out of the way.
+  const [lookupOpen, setLookupOpen] = useState(false);
 
-  // Whatever findOrder last retrieved, and nothing else. An earlier version
-  // fell back to orders[0] when a lookup missed, handing a stranger's name,
-  // address and handover PIN to anyone who typed a wrong number.
-  const currentOrder = trackedOrder ?? undefined;
+  /**
+   * Whatever findOrder last retrieved, and nothing else. An earlier version
+   * fell back to orders[0] when a lookup missed, handing a stranger's name,
+   * address and handover PIN to anyone who typed a wrong number.
+   *
+   * For a signed-in customer the same order out of `myOrders` is preferred,
+   * because that list is a live subscription: the kitchen moving the order to
+   * "Baking" changes this screen while it is open, with nothing to press.
+   */
+  const currentOrder = useMemo(() => {
+    if (!trackedOrder) return undefined;
+    return myOrders.find((o) => o.id === trackedOrder.id) ?? trackedOrder;
+  }, [trackedOrder, myOrders]);
+
+  // Nothing chosen yet, but their account has orders: open the newest, which is
+  // the one they came to look at nine times out of ten.
+  useEffect(() => {
+    if (!trackedOrder && myOrders.length > 0) showOrder(myOrders[0]);
+  }, [trackedOrder, myOrders, showOrder]);
+
+  /** An order found by number and phone that no account owns yet. */
+  const claimable =
+    isCustomerSignedIn &&
+    currentOrder != null &&
+    !currentOrder.customerUid &&
+    !myOrders.some((o) => o.id === currentOrder.id);
 
   const track = currentOrder ? getStageTrack(currentOrder) : [];
   const currentIndex = currentOrder ? track.indexOf(currentOrder.stage) : -1;
@@ -156,8 +187,75 @@ export const OrderTrackingView: React.FC = () => {
           Track your order
         </h2>
         <p className="text-xs text-[#6B574E] sm:text-sm">
-          Your order number and the mobile number you ordered with.
+          {isCustomerSignedIn
+            ? 'Every order on your account, live.'
+            : 'Your order number and the mobile number you ordered with.'}
         </p>
+      </div>
+
+      {/*
+        The account's own orders.
+        
+        This is the half that survives signing out: the list comes from a query
+        the security rules allow only where the order's `customerUid` matches
+        the uid in the caller's token, so it is this person's orders and nobody
+        else's, on this phone or any other they sign in on.
+      */}
+      {isCustomerSignedIn && myOrders.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="px-1 text-xs font-semibold text-[#241510]">
+            Your orders
+            <span className="ml-1.5 font-normal tabular-nums text-[#8C766B]">
+              ({myOrders.length})
+            </span>
+          </h3>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {myOrders.map((order) => {
+              const active = currentOrder?.id === order.id;
+              return (
+                <button
+                  key={order.id}
+                  type="button"
+                  onClick={() => showOrder(order)}
+                  className={`shrink-0 rounded-xl border px-3 py-2 text-left transition-colors ${
+                    active
+                      ? 'border-[#241510] bg-white shadow-xs'
+                      : 'border-[#E8DFD8] bg-white hover:border-[#8C766B]'
+                  }`}
+                >
+                  <span className="block font-mono text-[11px] font-semibold text-[#241510]">
+                    {order.orderNumber}
+                  </span>
+                  <span className="mt-0.5 block text-[10px] text-[#8C766B]">
+                    {new Date(order.createdAt).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}{' '}
+                    · {STAGES[order.stage].label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="mx-auto max-w-xl space-y-2.5 text-center">
+        {/* Signed out, or signed in with nothing on the account yet: offer the
+            account, because it is what makes the next visit easier. */}
+        {!isCustomerSignedIn && (
+          <p className="rounded-xl border border-[#E8DFD8] bg-white px-3 py-2 text-[11px] leading-relaxed text-[#6B574E]">
+            <button
+              type="button"
+              id="btn-track-signin"
+              onClick={() => setIsCustomerAuthOpen(true)}
+              className="font-semibold text-[#C58940] underline underline-offset-2"
+            >
+              Sign in
+            </button>{' '}
+            and every order you place is listed here — no number to keep.
+          </p>
+        )}
 
         {/*
           Both halves are required, and that is the point. Order numbers run in
@@ -165,61 +263,102 @@ export const OrderTrackingView: React.FC = () => {
           let anyone read every customer's address by counting upwards. Asking
           for the phone number too means a lookup only works for the person who
           placed the order.
+
+          It stays available to someone signed in, for the order they placed as
+          a guest or on someone else's behalf -- folded away, because their own
+          list is above and they should not have to scroll past a form to get
+          to it.
         */}
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setNotFound(null);
-            const res = await findOrder(query, phone);
-            if (!res.success) setNotFound(res.message);
-          }}
-          className="mx-auto max-w-md space-y-2 pt-1 text-left"
-        >
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8C766B]" />
-            <input
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setNotFound(null);
-              }}
-              placeholder="Order number, e.g. OG-20260910-001"
-              aria-label="Order number"
-              className="w-full rounded-full border border-[#E8DFD8] bg-white py-2.5 pl-10 pr-4 text-xs text-[#241510] placeholder:text-[#A69286] focus:border-[#241510] focus:outline-none"
-            />
-          </div>
-
-          <div className="relative">
-            <Phone className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8C766B]" />
-            <input
-              value={phone}
-              inputMode="numeric"
-              autoComplete="tel"
-              onChange={(e) => {
-                setPhone(e.target.value);
-                setNotFound(null);
-              }}
-              placeholder="Mobile number you ordered with"
-              aria-label="Mobile number"
-              className="w-full rounded-full border border-[#E8DFD8] bg-white py-2.5 pl-10 pr-4 text-xs text-[#241510] placeholder:text-[#A69286] focus:border-[#241510] focus:outline-none"
-            />
-          </div>
-
+        {isCustomerSignedIn && myOrders.length > 0 && !lookupOpen ? (
           <button
-            type="submit"
-            disabled={isFindingOrder}
-            className="w-full rounded-full bg-[#241510] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#3D2317] disabled:opacity-60"
+            type="button"
+            onClick={() => setLookupOpen(true)}
+            className="text-[11px] font-medium text-[#8C766B] underline underline-offset-2 hover:text-[#241510]"
           >
-            {isFindingOrder ? 'Looking…' : 'Track my order'}
+            Track an order that is not listed
           </button>
+        ) : (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setNotFound(null);
+              setClaimNote(null);
+              const res = await findOrder(query, phone);
+              if (!res.success) setNotFound(res.message);
+            }}
+            className="mx-auto max-w-md space-y-2 pt-1 text-left"
+          >
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8C766B]" />
+              <input
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setNotFound(null);
+                }}
+                placeholder="Order number, e.g. OG-20260910-001"
+                aria-label="Order number"
+                className="w-full rounded-full border border-[#E8DFD8] bg-white py-2.5 pl-10 pr-4 text-xs text-[#241510] placeholder:text-[#A69286] focus:border-[#241510] focus:outline-none"
+              />
+            </div>
 
-          {notFound && (
-            <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-center text-[11px] text-rose-700">
-              {notFound}
-            </p>
-          )}
-        </form>
+            <div className="relative">
+              <Phone className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8C766B]" />
+              <input
+                value={phone}
+                inputMode="numeric"
+                autoComplete="tel"
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  setNotFound(null);
+                }}
+                placeholder="Mobile number you ordered with"
+                aria-label="Mobile number"
+                className="w-full rounded-full border border-[#E8DFD8] bg-white py-2.5 pl-10 pr-4 text-xs text-[#241510] placeholder:text-[#A69286] focus:border-[#241510] focus:outline-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isFindingOrder}
+              className="w-full rounded-full bg-[#241510] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#3D2317] disabled:opacity-60"
+            >
+              {isFindingOrder ? 'Looking…' : 'Track my order'}
+            </button>
+
+            {notFound && (
+              <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-center text-[11px] text-rose-700">
+                {notFound}
+              </p>
+            )}
+          </form>
+        )}
       </div>
+
+      {/*
+        Found by number and phone, and not yet on anyone's account. Offering to
+        keep it grants nothing new: getting this far already took both halves,
+        which is the same proof the rules ask for to read the order at all.
+      */}
+      {claimable && (
+        <div className="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-2 rounded-xl border border-[#E8DFD8] bg-white px-3 py-2.5 text-[11px] text-[#6B574E]">
+          <span>Keep this order on your account?</span>
+          <button
+            type="button"
+            id="btn-claim-order"
+            onClick={async () => {
+              const res = await claimOrder(currentOrder.id);
+              setClaimNote(res.message);
+            }}
+            className="rounded-full bg-[#241510] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#3D2317]"
+          >
+            Save to my account
+          </button>
+        </div>
+      )}
+      {claimNote && (
+        <p className="mx-auto max-w-xl text-center text-[11px] text-emerald-800">{claimNote}</p>
+      )}
 
       {!currentOrder ? (
         <div className="mx-auto max-w-md rounded-2xl border border-[#E8DFD8] bg-white p-8 text-center shadow-xs">
@@ -230,7 +369,9 @@ export const OrderTrackingView: React.FC = () => {
           <p className="mt-1 text-xs text-[#8C766B]">
             {notFound
               ? 'Check both the order number and the mobile number on your confirmation, or message us and we will look it up.'
-              : 'Your order number was shown when you checked out and starts with OG-. We ask for your mobile number too, so that nobody else can open your order.'}
+              : isCustomerSignedIn
+                ? 'Nothing on your account yet. Orders you place while signed in are listed here automatically.'
+                : 'Your order number was shown when you checked out and starts with OG-. We ask for your mobile number too, so that nobody else can open your order.'}
           </p>
           <a
             href={getWhatsAppSupportLink('Order tracking help')}

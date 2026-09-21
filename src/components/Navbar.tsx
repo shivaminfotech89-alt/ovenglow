@@ -11,8 +11,8 @@ import {
   Store,
   ShieldCheck,
   Sparkles,
-  Phone,
-  Search
+  Search,
+  User
 } from 'lucide-react';
 
 type MobileTabId = 'shop' | 'signature' | 'track' | 'account' | 'admin';
@@ -32,7 +32,7 @@ const MOBILE_TABS: {
   { id: 'shop', label: 'Menu', icon: Store },
   { id: 'signature', label: 'Signature', icon: Sparkles },
   { id: 'track', label: 'Track', icon: Truck },
-  { id: 'account', label: 'Account', icon: Phone },
+  { id: 'account', label: 'Account', icon: User },
 ];
 
 const CONSOLE_TAB = { id: 'admin' as MobileTabId, label: 'Console', icon: ShieldCheck };
@@ -227,12 +227,12 @@ export const Navbar: React.FC = () => {
               )}
             </nav>
             
-            {/* Customer Mobile Login / Profile Pill */}
+            {/* Customer account pill */}
             <button
               id="nav-btn-customer-account"
               onClick={() => setIsCustomerAuthOpen(true)}
               className="hidden min-h-10 sm:flex items-center gap-1.5 rounded-full border border-[#E8DFD8] bg-[#FAF7F2] px-3 text-xs text-[#241510] transition-all hover:bg-[#F2ECE4]"
-              title={customerUser ? 'Your account and orders' : 'Sign in with your mobile number'}
+              title={customerUser ? 'Your account and orders' : 'Sign in to keep your orders and address'}
             >
               {customerUser ? (
                 <>
@@ -245,7 +245,7 @@ export const Navbar: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <Phone className="w-3.5 h-3.5 text-[#C58940]" />
+                  <User className="w-3.5 h-3.5 text-[#C58940]" />
                   <span className="font-medium text-xs hidden sm:inline">Sign In</span>
                 </>
               )}

@@ -113,8 +113,10 @@ export const Navbar: React.FC = () => {
           
           {/* Left: Brand Logo & Pincode */}
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-            <OvenglowLogo 
-              size="sm" 
+            <OvenglowLogo
+              id="ovenglow-brand-logo"
+              size="sm"
+              panel
               onClick={() => {
                 setActiveTab('shop');
                 window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -16,6 +16,7 @@ import { CheckoutModal } from './components/CheckoutModal';
 import { CustomerAuthModal } from './components/CustomerAuthModal';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { Footer } from './components/Footer';
+import { WhatsAppButton } from './components/WhatsAppButton';
 import { Product, Order } from './types';
 
 function AppContent() {
@@ -110,6 +111,9 @@ function AppContent() {
 
       {/* Global Footer */}
       <Footer />
+
+      {/* Reachable from every screen, which the hero button was not. */}
+      <WhatsAppButton />
     </div>
   );
 }

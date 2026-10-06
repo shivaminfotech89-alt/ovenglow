@@ -178,6 +178,38 @@ check(
   `found: ${JSON.stringify(advertised)}`,
 );
 await shopper.page.screenshot({ path: `${SHOTS}/e2e-shopfront.png` });
+
+// WhatsApp lives in the corner now, not in the hero. The hero's job is to send
+// someone into the catalogue, and a second call to action of equal weight was
+// taking that traffic somewhere else on the first screen.
+const heroCta = await shopper.page.evaluate(() => {
+  const hero = document.querySelector('h1')?.closest('div');
+  return [...(hero?.querySelectorAll('a, button') ?? [])]
+    .filter((el) => el.offsetWidth || el.offsetHeight)
+    .map((el) => (el.textContent || '').trim());
+});
+check(
+  'the hero no longer sends people to WhatsApp instead of the menu',
+  !heroCta.some((t) => /whatsapp/i.test(t)),
+  `hero buttons: ${JSON.stringify(heroCta)}`,
+);
+
+check(
+  'the WhatsApp mark floats over the shop',
+  await shopper.page.locator('#btn-whatsapp-float').isVisible(),
+);
+
+// And stays there, which is the point of moving it: a question occurs to
+// someone halfway down the catalogue, not in the hero.
+for (const tab of ['Signature', 'Track']) {
+  await shopper.page.locator('button:visible', { hasText: new RegExp(`^${tab}`) }).first().click();
+  await shopper.page.waitForTimeout(700);
+  check(
+    `the WhatsApp mark is still there on ${tab}`,
+    await shopper.page.locator('#btn-whatsapp-float').isVisible(),
+  );
+}
+
 await shopper.ctx.close();
 
 // ...but the address still opens it.

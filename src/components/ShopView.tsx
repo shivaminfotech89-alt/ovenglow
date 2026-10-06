@@ -91,6 +91,10 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
   // on the page.
   const shopEmail = storeSettings.email || 'ovenglowdelights@gmail.com';
 
+  // The hero's second button only exists when there is a showcase to send
+  // someone to. Offering a door to an empty room is worse than no door.
+  const hasSignature = products.some((p) => p.isSignature);
+
   const categories: { id: string; label: string; icon: typeof Sparkles }[] = [
     { id: 'all', label: 'Everything', icon: Sparkles },
     ...PRODUCT_CATEGORIES.map((c) => ({
@@ -283,15 +287,21 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
             </p>
 
             {/*
-              One call to action, not two.
+              Two ways into the catalogue, and only into the catalogue.
               
-              "Order on WhatsApp" used to sit beside this with equal weight, and
-              it competed with the thing the hero exists to do: send someone
-              into the catalogue. It is now the green mark in the corner, which
-              is reachable from here and from every screen after it -- including
-              the ones where a question actually occurs to someone.
+              "Order on WhatsApp" used to be the second button here, competing
+              with the thing the hero exists to do. It is the green mark in the
+              corner now. What takes its place leads further in rather than
+              away: the signature range, which was a full-width banner further
+              down the page -- below the five promises, where someone who had
+              already started scrolling the menu would scroll straight past it.
+              The showcase is the shop's best argument, so it is offered in the
+              first screen.
+              
+              The weights are deliberately unequal. Gold is the whole menu;
+              the outline is the short list.
             */}
-            <div className="mt-6 sm:mt-7">
+            <div className="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:items-center">
               <button
                 type="button"
                 onClick={() => {
@@ -302,6 +312,22 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
                 <span>See the menu</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
+
+              {hasSignature && (
+                <button
+                  type="button"
+                  id="btn-hero-signature"
+                  onClick={() => {
+                    setActiveTab('signature');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/25 px-6 text-sm font-semibold text-white transition-colors hover:border-[#E5A93C] hover:bg-white/5"
+                >
+                  <Sparkles className="h-4 w-4 text-[#E5A93C]" />
+                  <span>Our Most Craved Creations</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -353,35 +379,6 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
           ))}
         </ol>
       </section>
-
-      {/* A way through to the showcase, now that it has its own page. Renders
-          only when something is actually featured. */}
-      {products.some((p) => p.isSignature) && (
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('signature');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-[#EADBCE] bg-[#FFFDFA] px-5 py-4 text-left transition-colors hover:border-[#C58940] sm:px-7 sm:py-5"
-        >
-          <span className="min-w-0">
-            <span className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#5C4033]">
-              <Sparkles className="h-3.5 w-3.5 text-[#C58940]" />
-              Signature Collection
-            </span>
-            <span className="block font-serif text-lg font-bold tracking-tight text-[#2A1810] sm:text-xl">
-              Our Most Craved Creations
-            </span>
-            <span className="mt-0.5 block text-xs text-[#6B574E]">
-              The few we are asked for again and again.
-            </span>
-          </span>
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#241510] text-white transition-transform group-hover:translate-x-0.5">
-            <ArrowRight className="h-4 w-4" />
-          </span>
-        </button>
-      )}
 
       {/* Category Filter & Active Top-Bar Search Section */}
       <div className="space-y-3">

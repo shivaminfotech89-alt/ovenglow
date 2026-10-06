@@ -4,6 +4,26 @@ import { useStore } from '../context/StoreContext';
 interface OvenglowLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showSubtitle?: boolean;
+  /**
+   * Sit the lockup on a warm panel rather than on the bare background.
+   *
+   * For the header, where the name was adrift: a maroon badge and a brown
+   * wordmark on plain white read as two separate things that happened to be
+   * next to each other, and the name had nothing holding it. The panel gives
+   * the pair one edge, so the lockup reads as the shop's mark rather than as
+   * an icon with some text after it.
+   *
+   * Deliberately not the `#FAF7F2` used by the search box and the area chip --
+   * matching those would make the brand look like another control to press.
+   */
+  panel?: boolean;
+  /**
+   * An id for this instance. The mark appears twice on every page -- header and
+   * footer -- and the id used to be baked into the component, so both carried
+   * it. Two elements with the same id is invalid HTML, and it made
+   * `#ovenglow-brand-logo` ambiguous to anything selecting it.
+   */
+  id?: string;
   className?: string;
   onClick?: () => void;
 }
@@ -112,6 +132,8 @@ const Monogram: React.FC<{ scale: number; stroke: number }> = ({ scale, stroke }
 export const OvenglowLogo: React.FC<OvenglowLogoProps> = ({
   size = 'md',
   showSubtitle = true,
+  panel = false,
+  id,
   className = '',
   onClick,
 }) => {
@@ -129,9 +151,13 @@ export const OvenglowLogo: React.FC<OvenglowLogoProps> = ({
 
   return (
     <div
-      id="ovenglow-brand-logo"
+      id={id}
       onClick={onClick}
-      className={`flex min-w-0 items-center gap-2.5 select-none cursor-pointer group sm:gap-3 ${className}`}
+      className={`flex min-w-0 items-center gap-2.5 select-none cursor-pointer group sm:gap-3 ${
+        panel
+          ? 'rounded-full border border-[#EADBCE] bg-gradient-to-r from-[#FDF8F1] to-[#F6E9D8] py-1 pl-1 pr-3 shadow-[0_1px_3px_rgba(36,21,16,0.06)] transition-colors hover:border-[#C58940] sm:pr-4'
+          : ''
+      } ${className}`}
     >
       <div
         className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full shadow-sm ring-1 ring-black/5 transition-transform duration-300 group-hover:scale-105 ${current.box}`}

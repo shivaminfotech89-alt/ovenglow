@@ -277,6 +277,8 @@ await seedDoc('products/e2e-brownie', {
   image: { stringValue: '' },
   secondaryImages: { arrayValue: { values: [] } },
   isPublished: { booleanValue: true },
+  // Also the showcase item, so the hero's second button has somewhere to go.
+  isSignature: { booleanValue: true },
   stockCount: { integerValue: '10' },
   isVeg: { booleanValue: true },
   rating: { integerValue: '5' },
@@ -422,6 +424,54 @@ await seedDoc('products/e2e-checkout', {
 
 const buyer = await openContext('buyer');
 await buyer.page.waitForTimeout(2500);
+
+/* ------------------------------------------ the hero, and the brand lockup */
+
+/**
+ * The signature range is offered from the first screen.
+ *
+ * It used to be a full-width banner below the five promises -- past the fold,
+ * and past the point where someone scrolling the menu would still notice it.
+ * The showcase is the shop's best argument, so it moved up beside "See the
+ * menu", and the banner went. Both halves are asserted, because moving
+ * something and forgetting to remove the original is the usual way this goes
+ * wrong.
+ */
+check(
+  'the hero offers the signature range',
+  await buyer.page.locator('#btn-hero-signature').isVisible(),
+);
+check(
+  'the signature range is offered once, not twice',
+  (await buyer.page.evaluate(
+    () => (document.body.innerText.match(/Our Most Craved Creations/g) ?? []).length,
+  )) === 1,
+);
+
+// The brand name had nothing behind it: a maroon badge and a brown wordmark on
+// plain white, reading as two unrelated things side by side.
+check(
+  'the brand name sits on a background of its own',
+  await buyer.page.evaluate(() => {
+    const el = document.getElementById('ovenglow-brand-logo');
+    if (!el) return false;
+    const style = getComputedStyle(el);
+    const painted =
+      style.backgroundImage !== 'none' ||
+      !/rgba\(0, 0, 0, 0\)|transparent/.test(style.backgroundColor);
+    return painted && style.borderTopWidth !== '0px';
+  }),
+);
+
+await buyer.page.locator('#btn-hero-signature').click();
+await buyer.page.waitForTimeout(1200);
+check(
+  'and it opens the signature page',
+  await buyer.page.evaluate(() => /our most craved creations/i.test(document.body.innerText)),
+);
+await buyer.page.screenshot({ path: `${SHOTS}/e2e-signature-from-hero.png` });
+await buyer.page.locator('#nav-btn-shop').click();
+await buyer.page.waitForTimeout(1200);
 
 await buyer.page.locator('#btn-add-product-e2e-checkout').click();
 await buyer.page.waitForTimeout(900);

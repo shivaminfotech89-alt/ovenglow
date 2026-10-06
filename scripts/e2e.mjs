@@ -424,22 +424,175 @@ check(
 );
 await buyer.page.screenshot({ path: `${SHOTS}/e2e-checkout-form.png` });
 
-await buyer.page.fill('input[name="name"], #checkout-name', 'Test Buyer').catch(async () => {
-  const boxes = buyer.page.locator('form input[type=text], form input:not([type])');
-  await boxes.nth(0).fill('Test Buyer');
-});
-const fills = [
-  ['phone', '9812345678'],
-  ['address', '4 Test Road'],
-  ['pincode', '380054'],
-];
-for (const [key, value] of fills) {
-  const box = buyer.page.locator(`input[name="${key}"], #checkout-${key}`).first();
-  if (await box.count()) await box.fill(value);
-}
+/**
+ * The rest of a real checkout.
+ *
+ * The form used to be filled positionally and then abandoned, because the
+ * inputs carried no ids -- "Test Buyer" went into the search box in the header
+ * and the phone field was never found at all. Nothing ever pressed "Place
+ * order", and so nothing ever noticed that pressing it failed every time:
+ * `stripForFirestore` did not recurse into arrays, `items[0].customMessage` is
+ * undefined on any item without a gift message, and Firestore rejects
+ * undefined. Every order on the live site was lost at the last step.
+ */
+await buyer.page.fill('#checkout-name', 'Test Buyer');
+await buyer.page.fill('#checkout-phone', '9812345678');
+await buyer.page.fill('#checkout-address', '4 Test Road');
+await buyer.page.fill('#checkout-pincode', '380054');
 await buyer.page.screenshot({ path: `${SHOTS}/e2e-checkout-filled.png` });
 
+await buyer.page.locator('#btn-checkout-continue').click();
+await buyer.page.waitForTimeout(900);
+check(
+  'the payment step offers a way to pay',
+  await buyer.page.locator('#btn-place-order').isVisible(),
+);
+
+await buyer.page.locator('#btn-place-order').click();
+await buyer.page.waitForTimeout(4000);
+await buyer.page.screenshot({ path: `${SHOTS}/e2e-order-placed.png` });
+
+const placedText = await buyer.page.evaluate(() => document.body.innerText);
+const placedNumber = (placedText.match(/OG-\d{8}-\d+/) ?? [])[0];
+check(
+  'the order is actually placed',
+  Boolean(placedNumber),
+  `no order number on the confirmation. Page said: ${placedText.slice(0, 200)}`,
+);
+
+const storedOrders = await fetch(`${REST}/orders`, {
+  headers: { Authorization: 'Bearer owner' },
+}).then((r) => r.json());
+check(
+  'the order reached the database',
+  (storedOrders.documents ?? []).some(
+    (d) => d.fields?.orderNumber?.stringValue === placedNumber,
+  ),
+  'the confirmation screen showed a number for an order that was never written',
+);
+
+// And a stranger on another device can find it with the two things they have.
+if (placedNumber) {
+  const finder = await openContext('finder');
+  await finder.page.locator('button:visible', { hasText: /^Track/ }).first().click();
+  await finder.page.waitForTimeout(800);
+  await finder.page.fill('input[aria-label="Order number"]', placedNumber);
+  await finder.page.fill('input[aria-label="Mobile number"]', '9812345678');
+  await finder.page.click('form button[type=submit]');
+  await finder.page.waitForTimeout(3000);
+  check(
+    'a real order can be tracked with its number and phone',
+    await finder.page.evaluate((n) => document.body.innerText.includes(n), placedNumber),
+    'the lookup document was never written, so the order cannot be found',
+  );
+  await finder.page.screenshot({ path: `${SHOTS}/e2e-track-real-order.png` });
+  await finder.ctx.close();
+}
+
+/* -------------------------------------------- a customer with an account */
+
+/**
+ * The requirement in the shop's own words: stay signed in, and after signing
+ * out and back in, the order history is still there.
+ *
+ * Both halves are checked against the real thing. Staying signed in is a page
+ * reload, not a mocked call; the history is a Firestore query the security
+ * rules allow only where the order's `customerUid` matches the token -- so if
+ * the stamp or the rule were wrong, the list would come back empty here.
+ */
+const MEMBER = { email: `member${Date.now()}@example.com`, password: 'member-pass-123' };
+const member = await openContext('member');
+await member.page.waitForTimeout(2000);
+
+await member.page.locator('#nav-btn-customer-account').click();
+await member.page.waitForTimeout(600);
+await member.page.locator('button', { hasText: 'Create an account' }).click();
+await member.page.fill('#customer-name', 'Member Buyer');
+await member.page.fill('#customer-email', MEMBER.email);
+await member.page.fill('#customer-password', MEMBER.password);
+await member.page.locator('#btn-customer-email-submit').click();
+await member.page.waitForTimeout(3000);
+await member.page.screenshot({ path: `${SHOTS}/e2e-member-registered.png` });
+
+check(
+  'creating an account signs the customer in',
+  await member.page.evaluate(() => /member/i.test(document.body.innerText)),
+  (await member.page.evaluate(() => document.body.innerText)).slice(0, 220),
+);
+
+// Stay signed in: a reload is the cheapest honest test of persistence.
+await member.page.reload({ waitUntil: 'domcontentloaded' });
+await member.page.waitForTimeout(2500);
+check(
+  'the customer is still signed in after a reload',
+  await member.page.evaluate(() => /member/i.test(document.body.innerText)),
+  'the session did not survive a page load',
+);
+
+await member.page.locator('#btn-add-product-e2e-checkout').click();
+await member.page.waitForTimeout(700);
+await member.page.locator('#nav-btn-open-cart').click();
+await member.page.waitForTimeout(700);
+await member.page.locator('#btn-cart-proceed-checkout').click();
+await member.page.waitForTimeout(900);
+await member.page.fill('#checkout-name', 'Member Buyer');
+await member.page.fill('#checkout-phone', '9700000001');
+await member.page.fill('#checkout-address', '9 Member Lane');
+await member.page.fill('#checkout-pincode', '380054');
+await member.page.locator('#btn-checkout-continue').click();
+await member.page.waitForTimeout(900);
+await member.page.locator('#btn-place-order').click();
+await member.page.waitForTimeout(4500);
+
+const memberNumber = (
+  (await member.page.evaluate(() => document.body.innerText)).match(/OG-\d{8}-\d+/) ?? []
+)[0];
+check('a signed-in customer can order', Boolean(memberNumber));
+
+// The confirmation screen is still up and covering the page; its own button is
+// how a customer leaves it, so it is how the test leaves it too.
+await member.page.locator('#btn-track-my-order').click();
+await member.page.waitForTimeout(2500);
+await member.page.screenshot({ path: `${SHOTS}/e2e-member-orders.png` });
+check(
+  'their order is listed on their account without typing anything',
+  await member.page.evaluate(
+    () => /your orders/i.test(document.body.innerText),
+  ),
+);
+
+// Sign out, sign back in: the part the shop asked for by name.
+await member.page.locator('#nav-btn-customer-account').click();
+await member.page.waitForTimeout(700);
+await member.page.locator('button', { hasText: 'Sign out' }).click();
+await member.page.waitForTimeout(2500);
+check(
+  'signing out really signs the customer out',
+  await member.page.evaluate(() => !/member buyer/i.test(document.body.innerText)),
+  (await member.page.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ').slice(0, 400),
+);
+await member.page.screenshot({ path: `${SHOTS}/e2e-member-signed-out.png` });
+
+// The account panel stays open after signing out, showing the sign-in form, so
+// there is nothing to reopen -- just sign back in where we are.
+await member.page.fill('#customer-email', MEMBER.email);
+await member.page.fill('#customer-password', MEMBER.password);
+await member.page.locator('#btn-customer-email-submit').click();
+await member.page.waitForTimeout(3500);
+
+await member.page.locator('button:visible', { hasText: /^Track/ }).first().click();
+await member.page.waitForTimeout(3000);
+await member.page.screenshot({ path: `${SHOTS}/e2e-member-history.png` });
+check(
+  'after signing out and back in, the order history is still there',
+  memberNumber
+    ? await member.page.evaluate((n) => document.body.innerText.includes(n), memberNumber)
+    : false,
+  'the account came back empty, which is the whole thing the shop asked for',
+);
+
 console.log(`\nbuyer console errors:    ${buyer.errors.length ? buyer.errors.slice(0, 4) : 'none'}`);
+console.log(`member console errors:   ${member.errors.length ? member.errors.slice(0, 4) : 'none'}`);
 
 console.log(`\nadmin console errors:    ${admin.errors.length ? admin.errors.slice(0, 4) : 'none'}`);
 console.log(`customer console errors: ${customer.errors.length ? customer.errors.slice(0, 4) : 'none'}`);

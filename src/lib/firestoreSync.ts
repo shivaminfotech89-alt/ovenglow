@@ -6,7 +6,9 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
+  query,
   setDoc,
+  where,
   writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -89,6 +91,58 @@ export function useLiveCollection<T extends Identified>(
 
     return stop;
   }, [name, enabled]);
+
+  return state;
+}
+
+/**
+ * Subscribe to the documents in a collection where one field equals a value.
+ *
+ * Used for a customer's own orders. It matters that the filter is here and not
+ * applied after the fact: `orders` may not be listed by a customer at all, and
+ * the security rule that lets them read their own
+ * (`resource.data.customerUid == request.auth.uid`) only passes if the query
+ * itself carries that constraint. Fetching the collection and filtering in
+ * JavaScript would be refused outright -- which is the behaviour you want, and
+ * the reason the filter belongs in the query.
+ *
+ * No `orderBy`: pairing a filter with a sort on a different field needs a
+ * composite index, which has to be deployed before it works. A customer has a
+ * handful of orders, so they are sorted in the component instead.
+ */
+export function useLiveWhere<T extends Identified>(
+  name: string,
+  field: string,
+  value: string,
+  enabled = true,
+): CollectionState<T> {
+  const [state, setState] = useState<CollectionState<T>>({ items: [], ready: false, error: '' });
+
+  useEffect(() => {
+    if (!enabled || !value) {
+      setState({ items: [], ready: true, error: '' });
+      return;
+    }
+
+    setState((prev) => ({ ...prev, ready: false, error: '' }));
+
+    const stop = onSnapshot(
+      query(collection(db, name), where(field, '==', value)),
+      (snap: QuerySnapshot<DocumentData>) => {
+        setState({
+          items: snap.docs.map((d) => ({ ...(d.data() as T), id: d.id })),
+          ready: true,
+          error: '',
+        });
+      },
+      (e) => {
+        console.error(`Live ${name} where ${field} failed:`, e);
+        setState({ items: [], ready: true, error: describe(e, name) });
+      },
+    );
+
+    return stop;
+  }, [name, field, value, enabled]);
 
   return state;
 }
@@ -215,17 +269,23 @@ export async function removeMany(name: string, ids: string[]): Promise<void> {
  * "Unsupported field value: undefined".
  *
  * Nested objects are cleaned too, because PaymentRecord arrives inside an
- * order rather than at the top level. Arrays are left alone: a hole in an array
- * is data, not an absent field.
+ * order rather than at the top level -- and so are objects inside arrays. That
+ * last part was missing, on the reasoning that a hole in an array is data
+ * rather than an absent field. True of an array of numbers; the arrays here are
+ * lists of objects with optional fields, and leaving them alone was enough to
+ * make every order write throw.
  */
-function stripUndefined<T extends Record<string, unknown>>(value: T): T {
-  const out: Record<string, unknown> = {};
-  for (const [key, v] of Object.entries(value)) {
-    if (v === undefined) continue;
-    out[key] =
-      v && typeof v === 'object' && !Array.isArray(v) && (v as object).constructor === Object
-        ? stripUndefined(v as Record<string, unknown>)
-        : v;
+function stripUndefined<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((entry) => stripUndefined(entry)) as unknown as T;
   }
-  return out as T;
+  if (value && typeof value === 'object' && (value as object).constructor === Object) {
+    const out: Record<string, unknown> = {};
+    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v === undefined) continue;
+      out[key] = stripUndefined(v);
+    }
+    return out as T;
+  }
+  return value;
 }

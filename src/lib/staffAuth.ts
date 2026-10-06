@@ -46,6 +46,10 @@ export type { User };
  * discover which addresses have accounts. That is worth keeping, so the message
  * stays deliberately vague about which half was wrong.
  */
+export function explainAuthError(e: unknown): string {
+  return explain(e);
+}
+
 function explain(e: unknown): string {
   const code = (e as { code?: string })?.code ?? '';
   switch (code) {

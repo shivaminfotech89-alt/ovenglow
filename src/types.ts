@@ -135,6 +135,14 @@ export interface StageHistoryEntry {
 export interface Order {
   id: string;
   orderNumber: string;
+  /**
+   * The Firebase Auth uid of the customer who placed it, when they were signed
+   * in -- null for a guest order. This is what lets someone see their own order
+   * history: the rules allow listing `orders` only where this equals the uid in
+   * the caller's token, so the query returns their orders and refuses anything
+   * wider.
+   */
+  customerUid?: string | null;
   customer: CustomerDetails;
   items: CartItem[];
   itemTotal: number;
@@ -197,7 +205,18 @@ export interface StaffUser {
   lastLoginAt?: string;
 }
 
+/**
+ * Whoever the storefront is serving right now.
+ *
+ * `uid` is the difference between a signed-in customer and a guest. A guest
+ * gets one of these too -- checkout remembers their details so the next order
+ * pre-fills -- but it lives only in their browser and proves nothing. Only a
+ * `uid` is proof, because it comes from Firebase Auth and is the same value the
+ * security rules compare against an order's `customerUid`.
+ */
 export interface CustomerUser {
+  /** Firebase Auth uid; absent for a guest whose details were merely typed. */
+  uid?: string;
   phone: string;
   name: string;
   email?: string;
@@ -205,6 +224,17 @@ export interface CustomerUser {
   city?: string;
   pincode?: string;
   loggedInAt: string;
+}
+
+/** The half of a customer's account that lives in Firestore, at `customers/{uid}`. */
+export interface CustomerProfile {
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  pincode: string;
+  updatedAt: string;
 }
 
 export interface StoreSettings {

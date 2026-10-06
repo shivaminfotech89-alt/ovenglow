@@ -8,7 +8,8 @@ What the shop runs on, and what to click if any of it ever needs doing again.
 |---|---|---|---|
 | Menu, banners, coupons | Firestore | anyone | signed-in staff |
 | Shop settings, UPI id | Firestore | anyone | Super Admin |
-| Orders | Firestore | staff, or whoever holds the order's private id | staff |
+| Orders | Firestore | staff, the customer who placed it, or whoever holds its private id | staff |
+| A customer's name and address | Firestore | that customer, and staff | that customer |
 | Who works here | Firestore + Firebase Auth | signed-in staff | Super Admin |
 | Your shopping bag | your own browser | you | you |
 
@@ -124,10 +125,42 @@ and can still be signed in to — it simply grants nothing, because every rule
 reads the staff record. To kill the login itself, disable the user in
 Authentication → Users.
 
+## Customer accounts
+
+Customers can sign in, with Google or with an email and a password. It uses the
+same Firebase Auth project as staff, so the same two toggles under
+**Authentication → Sign-in method** cover both — there is nothing extra to
+switch on.
+
+Signing in is never required to buy anything. It buys two things:
+
+- **The session lasts.** Firebase keeps it through closing the tab, closing the
+  browser and restarting the phone.
+- **Their orders are listed for them.** No order number to keep, on this phone
+  or on the next one.
+
+An order placed while signed in is stamped with the customer's Firebase uid, and
+the rule that lets them list orders compares that stamp to the uid in their
+token. So the history is exactly their own orders, and a query for anyone else's
+is refused rather than trimmed — the filter has to be in the query, which is why
+`useLiveWhere` exists in `src/lib/firestoreSync.ts`.
+
+Their name, phone and address live at `customers/{uid}`. Staff can read it, so
+the shop can see who an order is for; nobody else can.
+
+**What this replaced**, and why it had to: the old "customer sign in" asked for a
+mobile number, believed whatever was typed, and printed "Verified Customer"
+above it. Nothing was checked. An order history on that basis would have handed
+a stranger somebody's name, address and every order they had placed, for the
+price of knowing their phone number.
+
 ## Order tracking
 
-Customers track an order with **the order number and the phone number they
-ordered with**. Both are required.
+A customer who is signed in opens **Track** and their orders are listed. Nothing
+to type.
+
+Otherwise — a guest, or an order placed before they made an account — it takes
+**the order number and the phone number they ordered with**. Both are required.
 
 Order numbers run in sequence — `OG-20260918-001`, `-002` — so a page that
 opened an order from its number alone would let anyone read every customer's
@@ -135,12 +168,17 @@ name, phone and address by counting upwards. Instead each order sits at a random
 document id that is never shown, and the only route to it is a SHA-256 of the
 number and the phone together (`src/lib/orderLookup.ts`).
 
+After a lookup succeeds, a signed-in customer is offered **Save to my account**,
+and it then joins their list. That grants nothing new: getting that far already
+took both halves, which is the same proof the rules ask for to read the order at
+all.
+
 ## Changing the rules
 
 Edit `firestore.rules`, then:
 
 ```sh
-npm run rules:test     # 50 assertions against the real rules engine
+npm run rules:test     # 69 assertions against the real rules engine
 npm run rules:deploy   # needs `npx firebase login` first
 ```
 
@@ -167,10 +205,18 @@ npx firebase emulators:exec --only firestore,auth \
   --project ovenglowdelights-9423a "node scripts/e2e.mjs"
 ```
 
-It opens two browsers — one shop, one admin — and checks that an order placed by
-someone who is not signed in appears on the admin's screen without a reload.
-That is the bug the whole migration exists to fix, so it is worth keeping
-honest.
+It opens several browsers and drives the real buttons: a shop, an admin, a
+guest tracking an order, and a customer who creates an account, orders, signs
+out and signs back in to find their order still listed.
+
+**Driving the real buttons is the point.** Every order in an earlier version of
+this file was written straight to the database over REST, and the checkout
+screen was never actually used. Two separate faults hid behind that. A hook
+declared below an early return blanked the page when checkout opened. And
+`stripForFirestore` did not look inside arrays, so the `customMessage` that is
+undefined on any item without a gift message reached Firestore, which rejects
+undefined — **every order failed to save, and had been failing since the move to
+Firestore.** Both were invisible to a test suite that never pressed the button.
 
 ## Vercel
 

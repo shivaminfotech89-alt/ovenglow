@@ -5,8 +5,7 @@ import { OvenglowLogo } from './OvenglowLogo';
 import { 
   ShoppingBag, 
   Truck, 
-  MapPin, 
-  MessageSquare, 
+  MapPin,  
   X, 
   Store,
   ShieldCheck,
@@ -45,7 +44,6 @@ export const Navbar: React.FC = () => {
     setIsCartOpen, 
     deliveryPincode, 
     setDeliveryPincode,
-    getWhatsAppSupportLink,
     currentStaff,
     customerUser,
     setIsCustomerAuthOpen,
@@ -251,16 +249,9 @@ export const Navbar: React.FC = () => {
               )}
             </button>
 
-            {/* WhatsApp */}
-            <a
-              href={getWhatsAppSupportLink('Order enquiry')}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Message us on WhatsApp"
-              className="flex h-11 w-11 items-center justify-center rounded-full text-[#25D366] transition-colors hover:bg-emerald-50"
-            >
-              <MessageSquare className="w-4 h-4" />
-            </a>
+            {/* WhatsApp used to be a third icon here. It is the green mark in
+                the corner now -- the same link, on every screen, and one of it
+                rather than two a hand's width apart. */}
 
             {/* Cart */}
             <button

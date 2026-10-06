@@ -16,7 +16,6 @@ import {
   IceCreamCone,
   Square,
   ArrowRight,
-  MessageSquare,
   X
 } from 'lucide-react';
 
@@ -79,8 +78,6 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
     shopProducts,
     products,
     setActiveTab,
-    getWhatsAppSupportLink,
-
     selectedCategory, 
     setSelectedCategory, 
     searchQuery, 
@@ -285,27 +282,26 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
               to order and delivered across {storeSettings.city}.
             </p>
 
-            <div className="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:items-center">
+            {/*
+              One call to action, not two.
+              
+              "Order on WhatsApp" used to sit beside this with equal weight, and
+              it competed with the thing the hero exists to do: send someone
+              into the catalogue. It is now the green mark in the corner, which
+              is reachable from here and from every screen after it -- including
+              the ones where a question actually occurs to someone.
+            */}
+            <div className="mt-6 sm:mt-7">
               <button
                 type="button"
                 onClick={() => {
                   document.getElementById('product-catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#E5A93C] px-6 text-sm font-bold text-[#241510] shadow-md transition-colors hover:bg-[#D99A2B] active:scale-[0.98]"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#E5A93C] px-7 text-sm font-bold text-[#241510] shadow-md transition-colors hover:bg-[#D99A2B] active:scale-[0.98]"
               >
                 <span>See the menu</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
-
-              <a
-                href={getWhatsAppSupportLink('Order enquiry')}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/20 px-6 text-sm font-semibold text-white transition-colors hover:border-white/40 hover:bg-white/5"
-              >
-                <MessageSquare className="h-4 w-4 text-emerald-400" />
-                <span>Order on WhatsApp</span>
-              </a>
             </div>
           </div>
         </div>

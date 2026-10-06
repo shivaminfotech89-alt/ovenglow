@@ -37,16 +37,29 @@ export const CartNotice: React.FC = () => {
 
   const count = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  /*
+   * On a phone this strip is as wide as the screen allows, which put its
+   * dismiss button underneath the floating WhatsApp mark. It steps up a row
+   * there, and sits in its usual place from `sm` up, where a centred pill of at
+   * most 28rem comes nowhere near the right-hand corner.
+   */
   return (
     <div
       role="status"
       aria-live="polite"
-      className={`fixed inset-x-0 z-40 flex justify-center px-4 transition-all duration-200 ${
-        visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'
+      className={`pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4 transition-all duration-200 bottom-[calc(8.25rem+env(safe-area-inset-bottom))] sm:bottom-[calc(4.25rem+env(safe-area-inset-bottom))] ${
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
       }`}
-      style={{ bottom: 'calc(4.25rem + env(safe-area-inset-bottom))' }}
     >
-      <div className="flex w-full max-w-md items-center gap-3 rounded-full border border-[#E8DFD8] bg-white py-2 pl-3 pr-2 shadow-lg">
+      {/* The strip that spans the screen is only a centring frame, and it must
+          not swallow clicks aimed at what is behind it -- the floating WhatsApp
+          mark sits in that band on a wide screen. Only the pill itself is
+          clickable. */}
+      <div
+        className={`flex w-full max-w-md items-center gap-3 rounded-full border border-[#E8DFD8] bg-white py-2 pl-3 pr-2 shadow-lg ${
+          visible ? 'pointer-events-auto' : 'pointer-events-none'
+        }`}
+      >
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
           <Check className="h-3.5 w-3.5" />
         </span>

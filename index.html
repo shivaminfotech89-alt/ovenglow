@@ -9,16 +9,23 @@
     <meta property="og:description" content="Cakes, cookies, brownies, cupcakes, muffins and cheesecakes, baked fresh for every occasion. Order on WhatsApp with live order tracking." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://ovenglowdelights.com/" />
-    <meta property="og:image" content="https://ovenglowdelights.com/icon-512.png" />
+    <meta property="og:image" content="https://ovenglowdelights.com/icon-512.png?v=2" />
     <meta property="og:site_name" content="Ovenglow Delights" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://ovenglowdelights.com/icon-512.png" />
+    <meta name="twitter:image" content="https://ovenglowdelights.com/icon-512.png?v=2" />
     <link rel="canonical" href="https://ovenglowdelights.com/" />
 
     <!-- Brand mark. The tab icon, the iOS home-screen icon, and the picture
-         that appears when the link is shared on WhatsApp. -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+         that appears when the link is shared on WhatsApp.
+         
+         The `?v=` is not decoration. These filenames are fixed, so redrawing
+         the artwork behind them changes no URL and a browser that already has
+         one keeps showing it -- which is what kept the old mark on screen after
+         the new one shipped. The header's copy is imported through the bundle
+         and gets a content hash for free; these cannot be, so bump the number
+         whenever the icons are regenerated. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#4A1520" />
     <!-- The two faces the first screen needs, fetched in parallel with the

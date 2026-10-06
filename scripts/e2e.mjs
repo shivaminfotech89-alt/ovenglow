@@ -463,6 +463,26 @@ check(
   }),
 );
 
+/**
+ * The mark is served from the bundle, not from its fixed public path.
+ *
+ * `/logo-mark.png` never changes, so redrawing the artwork behind it changed no
+ * URL, and browsers kept showing the old mark after the new one had shipped and
+ * deployed -- the fix reported as "still not updated". Importing it gives it a
+ * content hash, so new artwork is a new URL. If that resolution is ever undone,
+ * the src goes back to the bare path and this goes red.
+ */
+check(
+  'the brand mark is served from the bundle, so new artwork is a new URL',
+  await buyer.page.evaluate(() => {
+    const src = document.querySelector('#ovenglow-brand-logo img')?.getAttribute('src') ?? '';
+    return src.length > 0 && !/^\/logo(-mark)?\.png$/.test(src);
+  }),
+  await buyer.page.evaluate(
+    () => document.querySelector('#ovenglow-brand-logo img')?.getAttribute('src') ?? 'no image',
+  ),
+);
+
 await buyer.page.locator('#btn-hero-signature').click();
 await buyer.page.waitForTimeout(1200);
 check(

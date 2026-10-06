@@ -1,5 +1,36 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
+import brandBadge from '../assets/brand/logo.png';
+import brandMark from '../assets/brand/logo-mark.png';
+
+/**
+ * The shop's own artwork, imported rather than linked.
+ *
+ * `/logo.png` and `/logo-mark.png` are fixed paths, so replacing the artwork
+ * behind them changes no URL -- and a browser that fetched the old one keeps
+ * showing it. That is exactly what happened: the files were redrawn and
+ * deployed, and the old mark stayed on screen.
+ *
+ * Importing them instead puts a content hash in the filename, so new artwork is
+ * a new URL and there is nothing to clear. The settings field still works for a
+ * shop that wants to point somewhere else; it is only these two built-in paths,
+ * which are what `DEFAULT_STORE_SETTINGS` ships and what every seeded database
+ * holds, that are answered from the bundle.
+ *
+ * `public/logo.png` and `public/logo-mark.png` stay where they are even though
+ * nothing here fetches them any more: the admin's Settings screen previews
+ * whatever path is stored, and a broken image next to the box you type the path
+ * into is a confusing way to tell someone nothing is wrong.
+ */
+const BUILT_IN: Record<string, string> = {
+  '/logo.png': brandBadge,
+  '/logo-mark.png': brandMark,
+};
+
+function resolveArtwork(url: string | undefined): string {
+  const trimmed = (url ?? '').trim();
+  return BUILT_IN[trimmed] ?? trimmed;
+}
 
 interface OvenglowLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -142,10 +173,11 @@ export const OvenglowLogo: React.FC<OvenglowLogoProps> = ({
   const [artworkFailed, setArtworkFailed] = useState(false);
   // Small sizes prefer the tighter monogram crop: the full badge's arched
   // lettering is unreadable at header size and reads as noise.
-  const artworkSrc =
+  const artworkSrc = resolveArtwork(
     current.detail === 'simple'
       ? storeSettings.logoMarkUrl || storeSettings.logoUrl
-      : storeSettings.logoUrl;
+      : storeSettings.logoUrl,
+  );
   const useArtwork = !!artworkSrc && !artworkFailed;
   const label = `${storeSettings.storeName} logo`;
 

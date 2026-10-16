@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
 import { useStore } from '../context/StoreContext';
+import { VegMark } from './VegMark';
 import { formatRupees } from '../lib/pricing';
 import { ProductImage } from './ProductImage';
 import { 
@@ -49,15 +50,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
         {/* Top Floating Badges */}
         <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-1 pointer-events-none">
           <div className="flex items-center gap-1.5">
-            {/* Authentic FSSAI Veg Mark */}
-            {product.isVeg && (
-              <div 
-                title="100% Pure Vegetarian / Eggless" 
-                className="w-4 h-4 rounded-sm bg-white/95 border border-emerald-600 flex items-center justify-center shadow-xs pointer-events-auto"
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-              </div>
-            )}
+            {/* The green mark, as the food-safety rules draw it. No longer
+                conditional: the whole kitchen is vegetarian and eggless, and a
+                badge that appears on some cards and not others implies a
+                choice the shop does not offer. */}
+            <VegMark className="h-4 w-4 shadow-xs pointer-events-auto" />
 
             {product.isBestseller && (
               <span className="rounded-full bg-[#241510]/85 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-white backdrop-blur-xs">

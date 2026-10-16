@@ -1,5 +1,6 @@
 import React from 'react';
 import { OvenglowLogo } from './OvenglowLogo';
+import { VegMark } from './VegMark';
 import { FssaiMark } from './FssaiMark';
 import { useStore } from '../context/StoreContext';
 import { PRODUCT_CATEGORIES } from '../types';
@@ -29,7 +30,19 @@ export const Footer: React.FC = () => {
     <footer className="w-full bg-[#241510] border-t border-[#3D2317] text-[#D4C5B9] text-xs mt-16">
       {/* Guarantees Row */}
       <div className="border-b border-[#3D2317] bg-[#1E110D] py-6 px-4">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {/* First, because for a good share of this shop's customers it is the
+              question that decides whether they read the rest. */}
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-700/50 bg-[#14271C]">
+              <VegMark className="h-4 w-4" label="" />
+            </div>
+            <div>
+              <span className="block text-xs font-medium text-white">100% vegetarian</span>
+              <span className="text-[11px] text-[#A69286]">Eggless kitchen, every item</span>
+            </div>
+          </div>
+
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#2D1B14] border border-[#4A2D22] flex items-center justify-center text-[#C58940] shrink-0">
               <Truck className="w-4 h-4" />

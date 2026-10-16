@@ -3,6 +3,7 @@ import { Product } from '../types';
 import { useStore } from '../context/StoreContext';
 import { formatRupees } from '../lib/pricing';
 import { ProductImage } from './ProductImage';
+import { VegMark } from './VegMark';
 import { 
   X, 
   Star, 
@@ -66,14 +67,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
               lazy={false}
               className="w-full h-full object-cover"
             />
-            {product.isVeg && (
-              <div className="absolute top-2.5 left-2.5 bg-white/95 px-2 py-0.5 rounded-sm border border-emerald-600 flex items-center gap-1 shadow-xs">
-                <div className="w-3 h-3 border border-emerald-600 rounded-xs flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                </div>
-                <span className="text-[9px] font-medium text-emerald-800 tracking-wider">VEG</span>
-              </div>
-            )}
+            <div className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-sm border border-emerald-600 bg-white/95 px-2 py-0.5 shadow-xs">
+              <VegMark className="h-3 w-3" label="" />
+              <span className="text-[9px] font-medium tracking-wider text-emerald-800">VEG</span>
+            </div>
           </div>
 
           {/* Thumbnail row */}

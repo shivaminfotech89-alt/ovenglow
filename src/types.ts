@@ -44,7 +44,13 @@ export interface Product {
   /** Whether the product appears in the shop at all, independent of stock. */
   isPublished: boolean;
   stockCount: number;
-  isVeg: boolean; // 100% Eggless / Pure Vegetarian badge
+  /*
+   * `isVeg` used to live here. It implied the shop sometimes sells something
+   * else, and it made a food-safety claim a per-product checkbox that could be
+   * left wrong on one cake out of thirty-nine. The kitchen is entirely
+   * vegetarian and eggless; that is a fact about the shop, stated once, in
+   * VegMark and in the hero.
+   */
   rating: number;
   reviewCount: number;
   weightGrams: number;
@@ -186,6 +192,20 @@ export interface Banner {
   subtitle: string;
   buttonText: string;
   image: string;
+  /**
+   * The discount, in the shop's own words: "Flat 100 off your first box".
+   *
+   * A hero slide needs this or a `couponCode` to be shown at all. The hero
+   * carousel is the shop's own slide plus what is on offer; a hero banner with
+   * neither is a second brand slide competing with the first.
+   */
+  offerText?: string;
+  /**
+   * A code from the coupon table. Preferred over `offerText`, because the
+   * amount is then read from the coupon itself -- a slide cannot go on
+   * advertising 20% off after the shop has changed the code to 10%.
+   */
+  couponCode?: string;
   /**
    * The category this tile opens. Null means it opens an empty shop, which the
    * admin screen flags as a warning.

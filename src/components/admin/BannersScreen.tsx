@@ -214,6 +214,39 @@ export const BannersScreen: React.FC = () => {
             onChange={(image) => setDraft({ ...draft, image })}
             aspect="wide"
           />
+          {/*
+            Only hero slides carry an offer, and a hero slide without one is not
+            shown: the carousel opens on the shop itself, and the slides after
+            it are what is on offer. Said here rather than discovered by
+            wondering why a slide never appeared.
+          */}
+          {draft.slot === 'hero' && (
+            <>
+              <Field
+                label="Coupon code to advertise"
+                hint="The amount is read from the coupon, so changing the code's value changes the slide too."
+              >
+                <input
+                  value={draft.couponCode ?? ''}
+                  onChange={(e) => setDraft({ ...draft, couponCode: e.target.value.toUpperCase() })}
+                  placeholder="FESTIVE15"
+                  className={`${inputClass} font-mono uppercase`}
+                />
+              </Field>
+              <Field
+                label="Or the offer in your own words"
+                hint="Used when there is no coupon code. A hero slide with neither is not shown."
+              >
+                <input
+                  value={draft.offerText ?? ''}
+                  onChange={(e) => setDraft({ ...draft, offerText: e.target.value })}
+                  placeholder="Free delivery on orders over ₹499"
+                  className={inputClass}
+                />
+              </Field>
+            </>
+          )}
+
           <Field
             label="Shows products from"
             hint="A tile with no category opens an empty shop."

@@ -2,6 +2,7 @@ import React from 'react';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
 import { FssaiMark } from './FssaiMark';
+import { HeroCarousel } from './HeroCarousel';
 import { PRODUCT_CATEGORIES, Product, ProductCategory } from '../types';
 import { 
   Sparkles, 
@@ -43,6 +44,11 @@ const CATEGORY_ICONS: Record<ProductCategory, typeof Sparkles> = {
  */
 const WHY_OVENGLOW: { emoji: string; title: string; body: string }[] = [
   {
+    emoji: '🟢',
+    title: '100% Vegetarian',
+    body: 'Every item is vegetarian and eggless. No exceptions, nothing to check.',
+  },
+  {
     emoji: '🍫',
     title: 'Premium Ingredients',
     body: 'We believe great desserts begin with great ingredients.',
@@ -76,24 +82,16 @@ interface ShopViewProps {
 export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
   const { 
     shopProducts,
-    products,
-    setActiveTab,
     selectedCategory, 
     setSelectedCategory, 
     searchQuery, 
     setSearchQuery, 
-    isVegOnly,
-    setIsVegOnly,
     storeSettings
   } = useStore();
 
   // One place for the shop's address, so changing it in Settings changes it
   // on the page.
   const shopEmail = storeSettings.email || 'ovenglowdelights@gmail.com';
-
-  // The hero's second button only exists when there is a showcase to send
-  // someone to. Offering a door to an empty room is worse than no door.
-  const hasSignature = products.some((p) => p.isSignature);
 
   const categories: { id: string; label: string; icon: typeof Sparkles }[] = [
     { id: 'all', label: 'Everything', icon: Sparkles },
@@ -107,231 +105,21 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
   // Filtering
   const filteredProducts = shopProducts.filter((p) => {
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-    const matchesVeg = !isVegOnly || p.isVeg;
     const matchesSearch = 
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.hindiSubname && p.hindiSubname.includes(searchQuery)) ||
       p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.flavorNotes.some((n) => n.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    return matchesCategory && matchesVeg && matchesSearch;
+    return matchesCategory && matchesSearch;
   });
 
   return (
     <div id="shop-view-container" className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
       
-      {/* Light Atmospheric Hearth & Oven Glow spreading across the Hero Page Canvas Background */}
-      <div className="relative">
-        <div 
-          aria-hidden="true" 
-          className="absolute -top-16 left-1/2 -translate-x-1/2 w-[96%] max-w-6xl h-96 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#FF9933]/15 via-[#E5A93C]/8 to-transparent rounded-full blur-3xl pointer-events-none -z-10 animate-oven-glow" 
-        />
-        <div 
-          aria-hidden="true" 
-          className="absolute -top-6 right-6 sm:right-16 w-80 sm:w-[480px] h-80 sm:h-[480px] bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-[#FF7A18]/16 via-[#E5A93C]/8 to-transparent rounded-full blur-3xl pointer-events-none -z-10" 
-        />
-        <div 
-          aria-hidden="true" 
-          className="absolute -bottom-8 left-8 sm:left-20 w-72 sm:w-96 h-40 bg-[radial-gradient(ellipse,_var(--tw-gradient-stops))] from-[#E5A93C]/10 via-[#FF9933]/5 to-transparent rounded-full blur-2xl pointer-events-none -z-10" 
-        />
-
-        {/*
-          The banner.
-
-          It used to be sized by padding alone, so its height was whatever the
-          copy happened to need -- roughly square on a phone and a 3:1 letterbox
-          on a desktop, with the content stranded in the left third and half the
-          panel left empty. A minimum height per breakpoint fixes the shape, the
-          content column is capped so lines stay a readable length, and the
-          oven artwork now fills the space the copy does not.
-        */}
-        <div 
-          id="hero-showcase-banner"
-          className="relative flex min-h-[21rem] items-center overflow-hidden rounded-3xl border border-[#48281B] bg-gradient-to-br from-[#1C0E08] via-[#2A140B] to-[#120704] p-6 text-white shadow-[0_20px_50px_-15px_rgba(229,169,60,0.18),0_0_35px_-5px_rgba(255,122,24,0.12)] sm:min-h-[24rem] sm:p-10 lg:min-h-[27rem] lg:p-14"
-        >
-          {/* ========================================================= */}
-          {/* LIGHT OVEN GLOW BACKGROUND LAYERS */}
-          {/* ========================================================= */}
-
-          {/* 1. Primary Gentle Hearth Radiant Glow */}
-          <div 
-            aria-hidden="true"
-            className="absolute right-0 bottom-0 w-[420px] sm:w-[580px] md:w-[700px] h-[300px] sm:h-[400px] rounded-full pointer-events-none opacity-85"
-            style={{
-              background: 'radial-gradient(ellipse at 80% 90%, rgba(255, 120, 30, 0.24) 0%, rgba(229, 169, 60, 0.16) 32%, rgba(197, 137, 64, 0.08) 55%, transparent 75%)'
-            }}
-          />
-
-          {/* 2. Secondary Breathing Oven Hearth Glow (Soft pulsation) */}
-          <div 
-            aria-hidden="true"
-            className="absolute -right-16 -bottom-16 w-80 sm:w-[480px] h-80 sm:h-[480px] rounded-full bg-gradient-to-tl from-[#FF7A18]/20 via-[#E5A93C]/12 to-transparent blur-3xl pointer-events-none animate-oven-glow"
-          />
-
-          {/* 3. Subtle Warm Ambient Floor Spill from the Oven Mouth */}
-          <div 
-            aria-hidden="true"
-            className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#FF9933]/12 via-[#E5A93C]/5 to-transparent pointer-events-none"
-          />
-
-          {/* 4. Artistic Deck-Oven Hearth Silhouette in the Background (Right side) */}
-          <div 
-            aria-hidden="true"
-            className="pointer-events-none absolute bottom-0 right-0 h-56 w-64 select-none opacity-40 transition-opacity sm:right-4 sm:h-72 sm:w-80 md:right-8 md:h-80 md:w-[26rem] md:opacity-60 lg:right-10 lg:h-[21rem] lg:w-[32rem]"
-          >
-            {/* Deck Oven Arched Hearth Graphic */}
-            <svg viewBox="0 0 320 240" className="w-full h-full" fill="none">
-              <defs>
-                {/* Hearth Firelight Gradients */}
-                <radialGradient id="ovenHearthGlow" cx="50%" cy="85%" r="70%">
-                  <stop offset="0%" stopColor="#FFF4DE" stopOpacity="0.95" />
-                  <stop offset="25%" stopColor="#FFB347" stopOpacity="0.75" />
-                  <stop offset="55%" stopColor="#FF6B1A" stopOpacity="0.45" />
-                  <stop offset="85%" stopColor="#8A2B0E" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="#1A0D08" stopOpacity="0" />
-                </radialGradient>
-
-                <linearGradient id="ovenArchStone" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#4A2A1D" stopOpacity="0.65" />
-                  <stop offset="50%" stopColor="#361C13" stopOpacity="0.85" />
-                  <stop offset="100%" stopColor="#24110A" stopOpacity="0.95" />
-                </linearGradient>
-
-                <linearGradient id="flameBeam" x1="50%" y1="100%" x2="50%" y2="0%">
-                  <stop offset="0%" stopColor="#FF9933" stopOpacity="0.35" />
-                  <stop offset="100%" stopColor="#FF9933" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-
-              {/* Radiant Hearth Light Core */}
-              <path
-                d="M 50,240 A 110,110 0 0,1 270,240 Z"
-                fill="url(#ovenHearthGlow)"
-                className="animate-flame-flicker"
-              />
-
-              {/* Deck Oven Stone Arch Frame */}
-              <path
-                d="M 35,240 A 125,125 0 0,1 285,240 L 265,240 A 105,105 0 0,0 55,240 Z"
-                fill="url(#ovenArchStone)"
-                stroke="#6B3B26"
-                strokeWidth="1.5"
-                strokeOpacity="0.45"
-              />
-
-              {/* Refractory brick mortar grooves on arch */}
-              <path
-                d="M 80,165 L 68,155 M 115,130 L 108,116 M 160,116 L 160,102 M 205,130 L 212,116 M 240,165 L 252,155"
-                stroke="#E5A93C"
-                strokeWidth="1.5"
-                strokeOpacity="0.35"
-              />
-
-              {/* Radiant Heat Rays emanating from oven mouth */}
-              <polygon points="160,180 80,240 240,240" fill="url(#flameBeam)" />
-
-              {/* Warm Baking Deck Floor Line */}
-              <line x1="40" y1="236" x2="280" y2="236" stroke="#FF9933" strokeWidth="2.5" strokeOpacity="0.6" />
-              <line x1="70" y1="232" x2="250" y2="232" stroke="#FFF2D6" strokeWidth="1.5" strokeOpacity="0.45" />
-            </svg>
-
-            {/* Floating Warm Micro-Embers Rising from the Oven */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <span 
-                className="absolute bottom-6 left-1/3 w-1.5 h-1.5 rounded-full bg-[#FFB347] shadow-[0_0_8px_#FF9933] animate-ember-rise"
-                style={{ animationDelay: '0s', animationDuration: '3.8s' }} 
-              />
-              <span 
-                className="absolute bottom-8 left-1/2 w-1 h-1 rounded-full bg-[#FFE5B4] shadow-[0_0_6px_#FF9933] animate-ember-rise" 
-                style={{ animationDelay: '1.2s', animationDuration: '4.2s' }} 
-              />
-              <span 
-                className="absolute bottom-5 right-1/3 w-1.5 h-1.5 rounded-full bg-[#FF8C38] shadow-[0_0_8px_#E25822] animate-ember-rise" 
-                style={{ animationDelay: '2.3s', animationDuration: '3.6s' }} 
-              />
-              <span 
-                className="absolute bottom-10 left-[42%] w-1 h-1 rounded-full bg-[#FFD700] shadow-[0_0_6px_#FF9933] animate-ember-rise" 
-                style={{ animationDelay: '0.7s', animationDuration: '4.6s' }} 
-              />
-            </div>
-          </div>
-
-          {/* Hero content.
-
-              Capped at max-w-xl so the paragraph stays near sixty characters a
-              line; anything wider and the eye loses its place returning to the
-              left edge. */}
-          <div className="relative z-10 w-full max-w-xl">
-            {/* One eyebrow, not two. The freshness claim used to live in a pill
-                floating in the empty top-right corner, which left it attached
-                to nothing; the city and the claim belong in the same breath. */}
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#E5A93C] backdrop-blur-md sm:text-[11px]">
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF7A18] shadow-[0_0_8px_#FF7A18]"
-              />
-              <span>Baked fresh daily in {storeSettings.city}</span>
-            </p>
-
-            {/* Two deliberate lines rather than a `br` hidden below the sm
-                breakpoint, which left the phone layout to break wherever the
-                text happened to run out of room. */}
-            <h1 className="mt-4 font-serif text-[2rem] font-bold leading-[1.04] tracking-tight text-white sm:mt-5 sm:text-5xl lg:text-[3.5rem]">
-              <span className="block">Delights</span>
-              <span className="block italic font-normal text-[#E5A93C]">Crafted to Crave</span>
-            </h1>
-
-            <p className="mt-4 max-w-lg text-sm leading-relaxed text-[#D4C5B9] sm:mt-5 sm:text-base">
-              Cakes, cookies, brownies, cupcakes, muffins and cheesecakes, baked fresh
-              to order and delivered across {storeSettings.city}.
-            </p>
-
-            {/*
-              Two ways into the catalogue, and only into the catalogue.
-              
-              "Order on WhatsApp" used to be the second button here, competing
-              with the thing the hero exists to do. It is the green mark in the
-              corner now. What takes its place leads further in rather than
-              away: the signature range, which was a full-width banner further
-              down the page -- below the five promises, where someone who had
-              already started scrolling the menu would scroll straight past it.
-              The showcase is the shop's best argument, so it is offered in the
-              first screen.
-              
-              The weights are deliberately unequal. Gold is the whole menu;
-              the outline is the short list.
-            */}
-            <div className="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:items-center">
-              <button
-                type="button"
-                onClick={() => {
-                  document.getElementById('product-catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#E5A93C] px-7 text-sm font-bold text-[#241510] shadow-md transition-colors hover:bg-[#D99A2B] active:scale-[0.98]"
-              >
-                <span>See the menu</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-
-              {hasSignature && (
-                <button
-                  type="button"
-                  id="btn-hero-signature"
-                  onClick={() => {
-                    setActiveTab('signature');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/25 px-6 text-sm font-semibold text-white transition-colors hover:border-[#E5A93C] hover:bg-white/5"
-                >
-                  <Sparkles className="h-4 w-4 text-[#E5A93C]" />
-                  <span>Our Most Craved Creations</span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* The hero: the shop on the first slide, whatever is on offer after
+          it. Admin -> Banners writes the offer slides. */}
+      <HeroCarousel />
 
       {/* Why Ovenglow Delights -- sits directly under the hero so the reason to
           buy is read before the catalogue, and is the only place these five
@@ -384,29 +172,17 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
       <div className="space-y-3">
         {/* Categories Pill Navigation */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-          <button
-            type="button"
-            onClick={() => setIsVegOnly(!isVegOnly)}
-            aria-pressed={isVegOnly}
-            className={`flex min-h-10 shrink-0 select-none items-center gap-1.5 rounded-full border px-3.5 text-xs font-medium transition-all ${
-              isVegOnly
-                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                : 'border-[#E8DFD8] bg-white text-[#5C4033] hover:border-[#2A1810] hover:text-[#2A1810]'
-            }`}
-          >
-            <span
-              aria-hidden="true"
-              className="flex h-3 w-3 items-center justify-center rounded-xs border border-emerald-600"
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${isVegOnly ? 'bg-emerald-600' : 'bg-transparent'}`}
-              />
-            </span>
-            <span>Eggless only</span>
-          </button>
-
-          <span aria-hidden="true" className="h-5 w-px shrink-0 bg-[#E8DFD8]" />
-
+          {/*
+            An "Eggless only" filter used to lead this row, and a green tick on
+            every card answered the same question again.
+            
+            Both are gone: the kitchen is entirely vegetarian and eggless, so a
+            filter that never excludes anything is a control that does nothing,
+            and the claim belongs to the shop rather than to each cake. It is
+            made once in the hero and once in the promises below it, and the
+            green mark stays on the cards because that is the symbol people
+            actually scan for.
+          */}
           {categories.map((cat) => {
             const Icon = cat.icon;
             const isSelected = selectedCategory === cat.id;
@@ -456,7 +232,6 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
         <div className="flex items-center justify-between mb-3 sm:mb-4 px-0.5">
           <span className="text-xs font-medium tabular-nums text-[#8C766B]">
             Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'}
-            {isVegOnly && ', eggless only'}
           </span>
 
 

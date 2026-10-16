@@ -280,7 +280,6 @@ await seedDoc('products/e2e-brownie', {
   // Also the showcase item, so the hero's second button has somewhere to go.
   isSignature: { booleanValue: true },
   stockCount: { integerValue: '10' },
-  isVeg: { booleanValue: true },
   rating: { integerValue: '5' },
   reviewCount: { integerValue: '1' },
   weightGrams: { integerValue: '200' },
@@ -401,6 +400,43 @@ check(
 // declared below `if (!isOpen) return null` changed the hook count when the
 // modal opened, and pressing "Proceed to checkout" blanked the whole page.
 // Nothing short of clicking the real buttons would have found it.
+await seedDoc('coupons/e2e-deal', {
+  code: { stringValue: 'E2EDEAL' },
+  name: { stringValue: 'End to end deal' },
+  discountType: { stringValue: 'percentage' },
+  discountValue: { integerValue: '15' },
+  minPurchase: { integerValue: '0' },
+  expiresAt: { nullValue: null },
+  isActive: { booleanValue: true },
+  createdAt: { stringValue: '2026-01-01T00:00:00.000Z' },
+  timesUsed: { integerValue: '0' },
+});
+
+// An offer slide: the amount is read from the coupon, not from the banner.
+await seedDoc('banners/e2e-hero-offer', {
+  slot: { stringValue: 'hero' },
+  title: { stringValue: 'Boxes for the season' },
+  subtitle: { stringValue: 'Chocolate and cookies, boxed.' },
+  buttonText: { stringValue: 'Shop the offer' },
+  couponCode: { stringValue: 'E2EDEAL' },
+  image: { stringValue: '' },
+  linkedCategory: { stringValue: 'premium-chocolate' },
+  isActive: { booleanValue: true },
+  sortOrder: { integerValue: '0' },
+});
+
+// And one with no offer, which must not become a slide.
+await seedDoc('banners/e2e-hero-empty', {
+  slot: { stringValue: 'hero' },
+  title: { stringValue: 'Nothing on offer here' },
+  subtitle: { stringValue: 'Left from an earlier version of the site.' },
+  buttonText: { stringValue: 'See the menu' },
+  image: { stringValue: '' },
+  linkedCategory: { stringValue: 'premium-chocolate' },
+  isActive: { booleanValue: true },
+  sortOrder: { integerValue: '1' },
+});
+
 await seedDoc('products/e2e-checkout', {
   sku: { stringValue: 'E2E-CO' },
   name: { stringValue: 'Checkout Test Brownie' },
@@ -413,7 +449,6 @@ await seedDoc('products/e2e-checkout', {
   secondaryImages: { arrayValue: { values: [] } },
   isPublished: { booleanValue: true },
   stockCount: { integerValue: '10' },
-  isVeg: { booleanValue: true },
   rating: { integerValue: '5' },
   reviewCount: { integerValue: '1' },
   weightGrams: { integerValue: '200' },
@@ -440,6 +475,71 @@ await buyer.page.waitForTimeout(2500);
 check(
   'the hero offers the signature range',
   await buyer.page.locator('#btn-hero-signature').isVisible(),
+);
+
+/* ------------------------------------------------- the hero, as a carousel */
+
+/**
+ * The hero opens on the shop and then shows what is on offer.
+ *
+ * The `banners` collection and its admin screen existed from the start and
+ * nothing on the storefront ever read them, so a running discount lived in the
+ * announcement bar and nowhere else. These check the three things that can go
+ * wrong: the shop's own slide is first and says what the shop now sells, a
+ * banner carrying a coupon becomes a slide quoting that coupon's real value,
+ * and a hero banner with no offer at all is not shown.
+ */
+check(
+  'the hero opens on what the shop sells',
+  (await buyer.page.locator('#hero-showcase-banner h1:visible').innerText()).includes(
+    'Artisanal Premium Chocolates',
+  ),
+);
+
+const dots = buyer.page.locator('#hero-showcase-banner [role=tablist] button');
+check('the hero is a carousel', (await dots.count()) >= 2, `${await dots.count()} slides`);
+
+// Every slide in turn, rather than a fixed position: the catalogue seed adds
+// its own offer banners on first sign-in and the order between two slides that
+// share a sortOrder is nobody's to promise.
+let quoted = '';
+for (let i = 1; i < (await dots.count()); i += 1) {
+  await dots.nth(i).click();
+  await buyer.page.waitForTimeout(600);
+  const text = await buyer.page.evaluate(
+    () => document.querySelector('#hero-showcase-banner')?.innerText ?? '',
+  );
+  if (/E2EDEAL/.test(text)) quoted = text;
+}
+check(
+  'an offer slide quotes the discount and the code',
+  /15% off/.test(quoted) && /E2EDEAL/.test(quoted),
+  quoted ? quoted.replace(/\s+/g, ' ').slice(0, 160) : 'no slide quoted the seeded coupon',
+);
+check(
+  'a hero banner with no offer is not a slide',
+  !/Nothing on offer here/.test(
+    await buyer.page.evaluate(() => document.body.innerText),
+  ),
+);
+await buyer.page.screenshot({ path: `${SHOTS}/e2e-hero-offer.png` });
+await dots.nth(0).click();
+await buyer.page.waitForTimeout(600);
+
+/* ------------------------------------------------------ one kitchen, no choice */
+
+/**
+ * The shop is entirely vegetarian, so the "Eggless only" filter excluded
+ * nothing and the per-product tick asked a question with one answer. Both are
+ * gone; the claim is made once, as a fact about the shop.
+ */
+check(
+  'there is no filter for something every item already is',
+  !/eggless only/i.test(await buyer.page.evaluate(() => document.body.innerText)),
+);
+check(
+  'the shop says it is vegetarian without being asked',
+  /100% vegetarian/i.test(await buyer.page.evaluate(() => document.body.innerText)),
 );
 check(
   'the signature range is offered once, not twice',

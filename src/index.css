@@ -127,6 +127,39 @@ p {
   .animate-ember-rise {
     animation: emberRise 4s ease-out infinite;
   }
+
+  /*
+   * A hero slide arriving.
+   *
+   * Short, and a rise rather than a slide across: the panel's artwork stays
+   * put, so sending the words sideways past a fixed oven reads as a glitch.
+   * `prefers-reduced-motion` switches it off entirely -- the carousel also
+   * stops advancing on its own there, so the only movement left is the one the
+   * reader asked for by pressing a dot.
+   */
+  @keyframes heroSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-hero-slide {
+    animation: heroSlideIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-hero-slide,
+    .animate-oven-glow,
+    .animate-flame-flicker,
+    .animate-ember-rise {
+      animation: none;
+    }
+  }
 }
 
 /* Custom Scrollbar for Bold Typography Aesthetic */

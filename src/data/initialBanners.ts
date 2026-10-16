@@ -4,19 +4,38 @@ import { Banner } from '../types';
  * Homepage banners and tiles. Each tile carries the category it opens; the
  * Banners screen warns about any tile left unlinked, because that tile opens an
  * empty shop.
+ *
+ * Hero banners are the slides after the shop's own. Each needs a `couponCode`
+ * or an `offerText`: the carousel opens on who the shop is, and the slides that
+ * follow are what is on offer. A hero slide with no offer is a second brand
+ * slide arguing with the first, so it is not shown.
  */
 export const INITIAL_BANNERS: Banner[] = [
   {
-    id: 'banner-hero-1',
+    id: 'banner-hero-festive',
     slot: 'hero',
-    title: 'Delights Crafted to Crave',
-    subtitle: 'Cakes, cookies, brownies and more for every occasion.',
-    buttonText: 'See the menu',
-    image:
-      'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=1600&q=80',
+    title: 'Festive boxes, ready to gift',
+    subtitle: 'Chocolate, cookies and brownies, boxed for the season.',
+    buttonText: 'Shop the offer',
+    // Quoted from the coupon table rather than written out, so changing the
+    // code's value changes the slide with it.
+    couponCode: 'FESTIVE15',
+    image: '',
     linkedCategory: 'premium-chocolate',
     isActive: true,
     sortOrder: 0,
+  },
+  {
+    id: 'banner-hero-delivery',
+    slot: 'hero',
+    title: 'Free delivery across Ahmedabad',
+    subtitle: 'On every order over the free-delivery threshold.',
+    buttonText: 'Browse the menu',
+    offerText: 'Free delivery on orders over ₹499',
+    image: '',
+    linkedCategory: 'celebration-cakes',
+    isActive: true,
+    sortOrder: 1,
   },
   {
     id: 'banner-cat-1',

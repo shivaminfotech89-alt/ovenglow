@@ -30,7 +30,6 @@ const blankProduct = (): Omit<Product, 'id'> => ({
   secondaryImages: [],
   isPublished: false,
   stockCount: 0,
-  isVeg: true,
   rating: 0,
   reviewCount: 0,
   weightGrams: 100,
@@ -669,14 +668,6 @@ export const ProductsScreen: React.FC = () => {
                 onChange={(e) => setForm({ ...form, isPublished: e.target.checked })}
               />
               Visible in shop
-            </label>
-            <label className="flex items-center gap-2 text-xs text-[#5C4033]">
-              <input
-                type="checkbox"
-                checked={form.isVeg}
-                onChange={(e) => setForm({ ...form, isVeg: e.target.checked })}
-              />
-              Eggless / vegetarian
             </label>
             <label className="flex items-center gap-2 text-xs text-[#5C4033]">
               <input

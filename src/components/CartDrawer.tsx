@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { ProductImage } from './ProductImage';
 import { formatRupees } from '../lib/pricing';
+import { VegMark } from './VegMark';
 import { 
   X, 
   Trash2, 
@@ -154,11 +155,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                       <span className="font-medium text-[#241510] text-xs">
                         {formatRupees(item.product.price)}
                       </span>
-                      {item.product.isVeg && (
-                        <div className="w-3 h-3 rounded-xs border border-emerald-600 flex items-center justify-center">
-                          <div className="w-1 h-1 rounded-full bg-emerald-600" />
-                        </div>
-                      )}
+                      <VegMark className="h-3 w-3" />
                     </div>
                     {item.customMessage && (
                       <p className="text-[10px] text-[#8C766B] italic truncate mt-0.5">

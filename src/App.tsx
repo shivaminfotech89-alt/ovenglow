@@ -46,7 +46,17 @@ function AppContent() {
           last thing on the page, not here: with it on main the bar still sat
           over the footer's final row, and a 56px gap opened above the footer
           for no reason. */}
-      <main className="relative flex-1 overflow-hidden">
+      {/*
+        `overflow-x-clip`, not `overflow-hidden`.
+        
+        `overflow: hidden` on an ancestor makes that ancestor the scroll
+        container for everything inside it, and `position: sticky` then sticks
+        to a box that is itself scrolling away -- which is why the catalogue's
+        range headings slid off the top of the screen instead of pinning under
+        the header. `clip` trims the hero's glow the same way without creating
+        a scroll container.
+      */}
+      <main className="relative flex-1 overflow-x-clip">
         {/* Light atmospheric oven glow in background of hero page */}
         {activeTab === 'shop' && (
           <div 

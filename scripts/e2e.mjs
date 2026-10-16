@@ -457,6 +457,26 @@ await seedDoc('products/e2e-checkout', {
   flavorNotes: { arrayValue: { values: [] } },
 });
 
+await seedDoc('products/e2e-second-range', {
+  sku: { stringValue: 'E2E-CAKE' },
+  name: { stringValue: 'Checkout Test Cake' },
+  tagline: { stringValue: 'In a different range' },
+  description: { stringValue: 'Exists so Everything has two sections.' },
+  price: { integerValue: '600' },
+  originalPrice: { integerValue: '700' },
+  category: { stringValue: 'celebration-cakes' },
+  image: { stringValue: '' },
+  secondaryImages: { arrayValue: { values: [] } },
+  isPublished: { booleanValue: true },
+  stockCount: { integerValue: '4' },
+  rating: { integerValue: '5' },
+  reviewCount: { integerValue: '3' },
+  weightGrams: { integerValue: '500' },
+  shelfLife: { stringValue: '2 days' },
+  layers: { arrayValue: { values: [] } },
+  flavorNotes: { arrayValue: { values: [] } },
+});
+
 const buyer = await openContext('buyer');
 await buyer.page.waitForTimeout(2500);
 
@@ -541,6 +561,52 @@ check(
   'the shop says it is vegetarian without being asked',
   /100% vegetarian/i.test(await buyer.page.evaluate(() => document.body.innerText)),
 );
+
+/* ------------------------------------------------- the catalogue, in ranges */
+
+/**
+ * "Everything" is cut into named ranges, and the name stays put.
+ *
+ * It used to be one unbroken grid of thirty-nine cards with nothing to say
+ * where one range ended and the next began.
+ *
+ * The sticky half is worth asserting rather than eyeballing: `overflow: hidden`
+ * on an ancestor silently turns `position: sticky` into `position: static`,
+ * which is exactly what `<main>` was doing. Nothing errors, nothing logs -- the
+ * heading just scrolls away.
+ */
+const ranges = buyer.page.locator('#product-catalog-grid [id^="range-"]');
+check(
+  'the catalogue is cut into named ranges',
+  (await ranges.count()) >= 2,
+  `${await ranges.count()} ranges`,
+);
+
+const headerH = await buyer.page.evaluate(
+  () => document.querySelector('header')?.getBoundingClientRect().height ?? 0,
+);
+const rangeTop = await ranges
+  .nth(1)
+  .evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+await buyer.page.evaluate((y) => window.scrollTo(0, y + 320), rangeTop);
+await buyer.page.waitForTimeout(500);
+const pinned = (await ranges.nth(1).boundingBox())?.y ?? -1;
+check(
+  'a range name stays under the header while you scroll it',
+  Math.abs(pinned - (headerH + 4)) < 10,
+  `heading at ${pinned.toFixed(0)}, header ends at ${headerH.toFixed(0)}`,
+);
+await buyer.page.screenshot({ path: `${SHOTS}/e2e-catalogue-ranges.png` });
+
+check(
+  'nothing scrolls sideways',
+  !(await buyer.page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  )),
+);
+
+await buyer.page.evaluate(() => window.scrollTo(0, 0));
+await buyer.page.waitForTimeout(400);
 check(
   'the signature range is offered once, not twice',
   (await buyer.page.evaluate(

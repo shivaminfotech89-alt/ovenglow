@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { formatRupees } from '../lib/pricing';
 import { OvenglowLogo } from './OvenglowLogo';
@@ -53,6 +53,28 @@ export const Navbar: React.FC = () => {
     storeSettings
   } = useStore();
 
+  /**
+   * Publish the header's height, so things below it can stick underneath it.
+   *
+   * The catalogue's category headings stay on screen while you scroll a
+   * section, and they have to stop just below this bar rather than slide under
+   * it. Its height is not a constant anyone could type: the announcement row
+   * grows a second line when a coupon is running, the phone gets a search row
+   * the desktop does not, and a signed-in staff member adds a Console tab. So
+   * it is measured, and re-measured whenever it changes.
+   */
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const publish = () =>
+      document.documentElement.style.setProperty('--header-h', `${el.offsetHeight}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   // The banner advertises a real, live code or nothing at all.
   const featuredCoupon =
     coupons.find(
@@ -85,7 +107,7 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-[#EBE3DA] shadow-[0_2px_8px_rgba(36,21,16,0.03)] transition-all">
+      <header ref={headerRef} className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-[#EBE3DA] shadow-[0_2px_8px_rgba(36,21,16,0.03)] transition-all">
         {/* Sleek Minimal Top Announcement Bar */}
         <div className="bg-[#241510] py-1.5 px-4 text-center text-[11px] font-normal text-[#E8DFD8] flex items-center justify-center gap-2 tracking-wide">
           <span>

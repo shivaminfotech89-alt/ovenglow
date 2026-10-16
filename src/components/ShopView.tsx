@@ -114,6 +114,33 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
     return matchesCategory && matchesSearch;
   });
 
+  /**
+   * The catalogue, cut into its ranges.
+   *
+   * "Everything" used to be one unbroken grid of thirty-nine cards: a muffin
+   * next to a celebration cake next to a slab of chocolate, with nothing to say
+   * where one range ended and the next began. Someone scrolling it had no idea
+   * what they were looking at or how much was left.
+   *
+   * Cut into sections with the range's name above each, and the name stays on
+   * screen while you scroll that section, so the answer to "what am I looking
+   * at" is always on the page rather than somewhere above it.
+   *
+   * Only for "Everything". Picking a single range already says what it is, and
+   * one heading over one grid is a label for something nobody asked about.
+   * Empty ranges are dropped -- during a search most of them will be.
+   */
+  const sections =
+    selectedCategory === 'all'
+      ? PRODUCT_CATEGORIES.map((c) => ({
+          ...c,
+          icon: CATEGORY_ICONS[c.id],
+          items: filteredProducts.filter((p) => p.category === c.id),
+        })).filter((group) => group.items.length > 0)
+      : null;
+
+  const cardGrid = 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5';
+
   return (
     <div id="shop-view-container" className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
       
@@ -265,8 +292,56 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
               Reset filters
             </button>
           </div>
+        ) : sections ? (
+          <div className="space-y-7 sm:space-y-9">
+            {sections.map((group) => {
+              const Icon = group.icon;
+              return (
+                <section key={group.id} aria-labelledby={`range-${group.id}`}>
+                  {/*
+                    An `h2`, not an `h3`: the cards inside carry `h3` for the
+                    product name, and a range heading that ranks level with the
+                    things under it tells a screen reader there is no nesting
+                    here at all.
+                    
+                    Sticky under the site header rather than at the top of the
+                    viewport: `--header-h` is measured by the header itself,
+                    because its height is not a number anyone could type -- the
+                    phone has a search row the desktop does not, and a signed-in
+                    staff member adds a tab.
+                    
+                    Opaque, because cards scroll underneath it.
+                  */}
+                  <h2
+                    id={`range-${group.id}`}
+                    style={{ top: 'calc(var(--header-h, 5rem) + 0.25rem)' }}
+                    className="sticky z-20 -mx-1 mb-3 flex items-center gap-2 rounded-lg bg-[#FAF7F2]/95 px-1 py-2 backdrop-blur-sm sm:mb-4"
+                  >
+                    <Icon className="h-4 w-4 shrink-0 text-[#C58940]" />
+                    <span className="font-serif text-base font-bold tracking-tight text-[#2A1810] sm:text-lg">
+                      {group.label}
+                    </span>
+                    <span className="rounded-full bg-[#F2ECE4] px-2 py-0.5 text-[10px] font-medium tabular-nums text-[#8C766B]">
+                      {group.items.length}
+                    </span>
+                    <span aria-hidden="true" className="ml-1 h-px flex-1 bg-[#EADBCE]" />
+                  </h2>
+
+                  <div className={cardGrid}>
+                    {group.items.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        onOpenDetails={onOpenProductDetails}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+          <div className={cardGrid}>
             {filteredProducts.map((product) => (
               <ProductCard
                 key={product.id}

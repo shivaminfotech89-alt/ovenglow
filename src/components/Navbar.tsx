@@ -1,11 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
 import { formatRupees } from '../lib/pricing';
 import { OvenglowLogo } from './OvenglowLogo';
 import { 
   ShoppingBag, 
-  Truck, 
-  MapPin,  
+  Truck,   
   X, 
   Store,
   ShieldCheck,
@@ -42,15 +41,11 @@ export const Navbar: React.FC = () => {
     setActiveTab, 
     cart, 
     setIsCartOpen, 
-    deliveryPincode, 
-    setDeliveryPincode,
     currentStaff,
     customerUser,
     setIsCustomerAuthOpen,
     searchQuery,
     setSearchQuery,
-    coupons,
-    storeSettings
   } = useStore();
 
   /**
@@ -58,10 +53,10 @@ export const Navbar: React.FC = () => {
    *
    * The catalogue's category headings stay on screen while you scroll a
    * section, and they have to stop just below this bar rather than slide under
-   * it. Its height is not a constant anyone could type: the announcement row
-   * grows a second line when a coupon is running, the phone gets a search row
-   * the desktop does not, and a signed-in staff member adds a Console tab. So
-   * it is measured, and re-measured whenever it changes.
+   * it. Its height is not a constant anyone could type: the phone gets a
+   * search row the desktop does not, the wordmark sets its own line height, and
+   * a signed-in staff member adds a Console tab. So it is measured, and
+   * re-measured whenever it changes.
    */
   const headerRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -75,27 +70,11 @@ export const Navbar: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
-  // The banner advertises a real, live code or nothing at all.
-  const featuredCoupon =
-    coupons.find(
-      (c) => c.isActive && (!c.expiresAt || new Date(c.expiresAt).getTime() > Date.now()),
-    ) ?? null;
 
-  const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
-  const [customPin, setCustomPin] = useState('');
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalCartAmount = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
-
-  const handleApplyPincode = (area: string, pin: string) => {
-    setDeliveryPincode(`${area} ${pin}`.trim());
-    setCustomPin('');
-    setIsPincodeModalOpen(false);
-  };
-
-  // Just the area for the chip; the pin is detail the header does not need.
-  const deliveryArea = deliveryPincode.replace(/\s*\d{6}\s*$/, '').trim() || deliveryPincode;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,32 +87,17 @@ export const Navbar: React.FC = () => {
   return (
     <>
       <header ref={headerRef} className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-[#EBE3DA] shadow-[0_2px_8px_rgba(36,21,16,0.03)] transition-all">
-        {/* Sleek Minimal Top Announcement Bar */}
-        <div className="bg-[#241510] py-1.5 px-4 text-center text-[11px] font-normal text-[#E8DFD8] flex items-center justify-center gap-2 tracking-wide">
-          <span>
-            Free delivery on orders over{' '}
-            <span className="tabular-nums">
-              {formatRupees(storeSettings.freeDeliveryThreshold)}
-            </span>
-          </span>
-          {featuredCoupon && (
-            <>
-              <span className="hidden sm:inline text-[#C58940]">•</span>
-              <span className="hidden sm:inline">
-                Use code{' '}
-                <strong className="text-white font-medium">{featuredCoupon.code}</strong>{' '}
-                for{' '}
-                {featuredCoupon.discountType === 'percentage'
-                  ? `${featuredCoupon.discountValue}% off`
-                  : `₹${featuredCoupon.discountValue} off`}
-              </span>
-            </>
-          )}
-        </div>
-
+        {/*
+          The announcement bar used to sit here, carrying the free-delivery
+          threshold and whichever coupon was running. Both now have a better
+          home: the hero's offer slides, which the shop writes itself and which
+          quote a coupon's real value from the coupon table rather than
+          restating it. A strip of small type above the logo on every screen of
+          the site was paying for the same words over and over.
+        */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-18 flex items-center justify-between gap-2.5 sm:gap-4">
           
-          {/* Left: Brand Logo & Pincode */}
+          {/* Left: the brand mark. */}
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <OvenglowLogo
               id="ovenglow-brand-logo"
@@ -144,17 +108,6 @@ export const Navbar: React.FC = () => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }} 
             />
-
-            {/* Location Delivery Selector (India) */}
-            <button
-              onClick={() => setIsPincodeModalOpen(true)}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7F2] hover:bg-[#F2ECE4] border border-[#E8DFD8] text-xs text-[#5C4033] transition-colors shrink-0"
-            >
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-[#C58940]" />
-              <span className="max-w-[9rem] truncate font-medium text-[#241510]">
-                {deliveryArea || 'Set your area'}
-              </span>
-            </button>
           </div>
 
           {/* Center: SHIFTED SEARCH BAR ON TOP BAR (Desktop & Tablet) */}
@@ -334,104 +287,14 @@ export const Navbar: React.FC = () => {
 
 
       {/*
-        The delivery-area picker.
-
-        It used to live inside <header>, which has `backdrop-blur-md`. A
-        backdrop-filter makes an element a containing block for its
-        position: fixed descendants, so `inset-0` resolved against the header's
-        hundred-pixel box rather than the viewport: the dialog centred itself
-        inside the header, clipped its own top off, and sat across the logo.
-        Moving it out of the header is the whole fix.
+        A delivery-area picker used to live here, opened by a "Set your area"
+        chip beside the logo.
+        
+        It asked a question whose answer changed nothing: the area it stored was
+        printed back on the product page and nowhere else, while the check that
+        matters -- whether the shop reaches a PIN code -- happens at checkout
+        against the areas set in Admin -> Settings, and still does.
       */}
-      {isPincodeModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delivery-area-title"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-xs sm:items-center"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsPincodeModalOpen(false);
-          }}
-        >
-          {/* max-h + overflow so a long list of areas scrolls inside the card
-              instead of running off the screen on a short phone. */}
-          <div className="relative max-h-[85vh] w-full max-w-sm space-y-3 overflow-y-auto rounded-2xl border border-[#E8DFD8] bg-white p-5 text-[#241510] shadow-xl">
-            <div className="flex items-center justify-between border-b border-[#F0EAE1] pb-3">
-              <h4
-                id="delivery-area-title"
-                className="flex items-center gap-2 font-serif text-base font-bold text-[#241510]"
-              >
-                <MapPin className="h-4 w-4 text-[#C58940]" />
-                Where are we delivering?
-              </h4>
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setIsPincodeModalOpen(false)}
-                className="rounded-full p-1 text-[#8C766B] hover:text-[#241510]"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* The old copy promised temperature-controlled shipping across
-                India. The shop bakes in one city and delivers by its own rider;
-                the areas below are the ones it actually covers, set in Settings. */}
-            <p className="text-xs text-[#8C766B]">
-              We bake and deliver across {storeSettings.city}. Pick your area so we can
-              check we reach you.
-            </p>
-
-            <div className="grid grid-cols-2 gap-2">
-              {storeSettings.deliveryAreas.map((area) => (
-                <button
-                  key={`${area.name}-${area.pin}`}
-                  type="button"
-                  onClick={() => handleApplyPincode(area.name, area.pin)}
-                  className="rounded-xl border border-[#E8DFD8] bg-[#FAF7F2] p-2.5 text-left text-xs transition-colors hover:border-[#C58940] hover:bg-white"
-                >
-                  <span className="block font-medium text-[#241510]">{area.name}</span>
-                  <span className="font-mono text-[10px] tabular-nums text-[#8C766B]">
-                    {area.pin}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="border-t border-[#F0EAE1] pt-2">
-              <label
-                htmlFor="delivery-pin-input"
-                className="mb-1 block text-[11px] font-medium text-[#8C766B]"
-              >
-                Somewhere else in {storeSettings.city}? Enter your 6-digit PIN
-              </label>
-              <div className="flex gap-2">
-                <input
-                  id="delivery-pin-input"
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  placeholder="380054"
-                  value={customPin}
-                  onChange={(e) => setCustomPin(e.target.value.replace(/\D/g, ''))}
-                  className="flex-1 rounded-lg border border-[#E8DFD8] bg-[#FAF7F2] px-3 py-1.5 font-mono text-xs tabular-nums text-[#241510] focus:border-[#241510] focus:outline-none"
-                />
-                <button
-                  type="button"
-                  disabled={customPin.length !== 6}
-                  onClick={() => handleApplyPincode(storeSettings.city, customPin)}
-                  className="rounded-lg bg-[#241510] px-3.5 py-1.5 text-xs font-medium text-white shadow-xs hover:bg-[#3D2317] disabled:opacity-40"
-                >
-                  Set
-                </button>
-              </div>
-              <p className="mt-1.5 text-[10px] text-[#A69286]">
-                Outside our area we will say so on WhatsApp before you pay.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Mobile tab bar. Heights are 56px with a 44px minimum touch area, and
           the bar pads itself past the iPhone home indicator. The Console tab

@@ -20,7 +20,7 @@ interface ProductDetailModalProps {
 }
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClose }) => {
-  const { addToCart, deliveryPincode } = useStore();
+  const { addToCart, storeSettings } = useStore();
   const [selectedImage, setSelectedImage] = useState<string>(product?.image || '');
   const [quantity, setQuantity] = useState<number>(1);
   const [giftNote, setGiftNote] = useState<string>('');
@@ -159,12 +159,20 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
               </div>
             </div>
 
-            {/* Delivery Estimator banner */}
+            {/*
+              This used to read "Delivering to <whatever area you picked in the
+              header>". The picker is gone -- it asked a question whose answer
+              was only ever printed back here -- so the line says what the shop
+              actually does. Whether an address can be reached is checked at
+              checkout, against the areas set in Admin -> Settings.
+            */}
             <div className="mt-3 p-2.5 rounded-xl bg-white border border-[#E8DFD8] flex items-center gap-2.5 text-xs text-[#5C4033]">
               <Truck className="w-4 h-4 text-[#C58940] shrink-0" />
               <div>
-                <span className="text-[#241510] font-medium block">Delivering to {deliveryPincode}</span>
-                <span className="text-[11px] text-[#8C766B]">Delivered fresh across the city.</span>
+                <span className="text-[#241510] font-medium block">
+                  Delivered across {storeSettings.city}
+                </span>
+                <span className="text-[11px] text-[#8C766B]">Baked to order, delivered fresh.</span>
               </div>
             </div>
 

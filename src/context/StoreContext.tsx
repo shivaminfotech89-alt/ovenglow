@@ -394,8 +394,6 @@ interface StoreContextType {
   setSelectedCategory: (cat: string) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  deliveryPincode: string;
-  setDeliveryPincode: (pin: string) => void;
 
   // Settings
   storeSettings: StoreSettings;
@@ -703,7 +701,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [activeTab]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [deliveryPincode, setDeliveryPincode] = useState<string>('');
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   /** The last thing added, so the storefront can confirm it briefly. */
   const [cartNotice, setCartNotice] = useState<{ name: string; at: number } | null>(null);
@@ -1778,8 +1775,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setSelectedCategory,
     searchQuery,
     setSearchQuery,
-    deliveryPincode,
-    setDeliveryPincode,
 
     storeSettings,
     updateStoreSettings,

@@ -598,6 +598,32 @@ check(
 );
 await buyer.page.screenshot({ path: `${SHOTS}/e2e-catalogue-ranges.png` });
 
+/* ------------------------------------------------------- a quieter header */
+
+/**
+ * The header carries the brand, the search and the way to the bag -- and
+ * nothing else.
+ *
+ * It used to open with a dark strip restating the free-delivery threshold and
+ * whichever coupon was running, on every screen of the site. Both now live on
+ * the hero's offer slides, where the shop writes them and a coupon's value is
+ * quoted from the coupon table rather than retyped.
+ *
+ * Beside the logo sat "Set your area", which stored an area that was printed
+ * back on the product page and used for nothing else. Whether the shop reaches
+ * an address is decided at checkout against Admin -> Settings, which is
+ * asserted separately by the order that goes through below.
+ */
+const headerText = await buyer.page.evaluate(
+  () => document.querySelector('header')?.innerText ?? '',
+);
+check('the header does not ask for an area', !/set your area/i.test(headerText), headerText);
+check(
+  'the header does not restate the offer on every screen',
+  !/free delivery on orders over/i.test(headerText),
+  headerText,
+);
+
 check(
   'nothing scrolls sideways',
   !(await buyer.page.evaluate(

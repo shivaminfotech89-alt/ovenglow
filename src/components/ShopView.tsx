@@ -115,7 +115,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
    * one heading over one grid is a label for something nobody asked about.
    * Empty ranges are dropped -- during a search most of them will be.
    */
-  const sections =
+  const grouped =
     selectedCategory === 'all'
       ? shopCategories
           .map((c) => ({
@@ -125,6 +125,18 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
           }))
           .filter((group) => group.items.length > 0)
       : null;
+
+  /*
+   * No sections means one plain grid, not an empty page.
+   *
+   * The grouping is driven by the `categories` collection, and an empty result
+   * here does not mean there is nothing to sell -- it means the ranges did not
+   * arrive, or every product is filed under a range that has been deleted or
+   * hidden. Rendering the section list regardless put a shop full of stock
+   * behind a blank space. The products are the thing; their arrangement is a
+   * convenience, and the page falls back to showing them unarranged.
+   */
+  const sections = grouped && grouped.length > 0 ? grouped : null;
 
   const cardGrid = 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5';
 

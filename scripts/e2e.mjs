@@ -261,6 +261,80 @@ await admin.page.locator('button:visible', { hasText: /Products/ }).first().clic
 await admin.page.waitForTimeout(1500);
 await admin.page.screenshot({ path: `${SHOTS}/e2e-admin-products.png` });
 
+/* ------------------------------------------------- ranges, added by the shop */
+
+/**
+ * The shop adds a range of its own, and it reaches the product form.
+ *
+ * The nine ranges were nine lines in `src/types.ts`, so a tenth meant a
+ * developer. These three checks are the whole promise of moving them into the
+ * database: the shop can add one, the product form offers it immediately, and
+ * the ranges that shipped with the shop seeded themselves rather than
+ * disappearing when the hardcoded list did.
+ */
+await admin.page.locator('button:visible', { hasText: /^Categories$/ }).first().click();
+await admin.page.waitForTimeout(1500);
+check(
+  'the ranges the shop opened with are listed',
+  await admin.page.evaluate(() => /premium chocolate/i.test(document.body.innerText)),
+);
+
+await admin.page.locator('#btn-add-category').click();
+await admin.page.waitForTimeout(600);
+await admin.page.fill('#category-label', 'Festive Hampers');
+// The address is shown while typing, because it is permanent.
+check(
+  'the address it will get is shown before it is created',
+  await admin.page.evaluate(() => /festive-hampers/.test(document.body.innerText)),
+);
+await admin.page.locator('#btn-save-category').click();
+await admin.page.waitForTimeout(2500);
+check(
+  'the shop can add a range of its own',
+  await admin.page.evaluate(() => /Festive Hampers/.test(document.body.innerText)),
+);
+await admin.page.screenshot({ path: `${SHOTS}/e2e-admin-categories.png` });
+
+/**
+ * Deleting is refused while products are in the range.
+ *
+ * Nothing cascades: the products would keep an address the menu no longer has
+ * and quietly stop appearing on the shop front. "Premium Chocolate" holds the
+ * seeded catalogue, so its delete button must be unavailable while
+ * "Festive Hampers", which is empty, can go.
+ */
+const deleteState = await admin.page.evaluate(() => {
+  const rows = [...document.querySelectorAll('tbody tr')];
+  const read = (name) => {
+    const row = rows.find((r) => r.textContent?.includes(name));
+    const btn = row?.querySelector('button[aria-label^="Delete"]');
+    return btn ? btn.disabled : null;
+  };
+  return { inUse: read('Premium Chocolate'), empty: read('Festive Hampers') };
+});
+check(
+  'a range with products in it cannot be deleted',
+  deleteState.inUse === true,
+  JSON.stringify(deleteState),
+);
+check(
+  'an empty range can be',
+  deleteState.empty === false,
+  JSON.stringify(deleteState),
+);
+
+// And the product form offers it without a reload.
+await admin.page.locator('button:visible', { hasText: /Products/ }).first().click();
+await admin.page.waitForTimeout(1500);
+check(
+  'a new range reaches the product form',
+  await admin.page.evaluate(() =>
+    [...document.querySelectorAll('select option')].some((o) =>
+      /Festive Hampers/.test(o.textContent ?? ''),
+    ),
+  ),
+);
+
 /* ------------------------------------------- a customer, in a different browser */
 
 // The seeded catalogue is deliberately unpriced and unpublished, so it is

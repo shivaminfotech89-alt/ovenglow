@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Plus, Search, Sparkles, X } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { PRODUCT_CATEGORIES, Product, isBuyable } from '../../types';
+import { Product, isBuyable } from '../../types';
+import { categoryLabel } from '../../lib/categories';
 import { formatRupees } from '../../lib/pricing';
 import { ImageField } from './ImageField';
 import {
@@ -18,7 +19,7 @@ import {
 const RECOMMENDED_MAX = 6;
 
 export const SignatureScreen: React.FC = () => {
-  const { products, updateProduct, hasPermission } = useStore();
+  const { products, categories, updateProduct, hasPermission } = useStore();
   const toast = useToast();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState('');
@@ -171,7 +172,7 @@ export const SignatureScreen: React.FC = () => {
 
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
                     <span className="text-[#8C766B]">
-                      {PRODUCT_CATEGORIES.find((c) => c.id === product.category)?.label}
+                      {categoryLabel(categories, product.category)}
                     </span>
                     {buyable ? (
                       <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">

@@ -3,35 +3,23 @@ import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
 import { FssaiMark } from './FssaiMark';
 import { HeroCarousel } from './HeroCarousel';
-import { PRODUCT_CATEGORIES, Product, ProductCategory } from '../types';
+import { Product } from '../types';
+import { categoryIcon } from '../lib/categories';
 import { 
   Sparkles, 
   Search, 
-  Gift,
-  Cake,
-  Layers,
-  Cookie,
-  Coffee,
-  Croissant,
-  CakeSlice,
-  IceCreamCone,
-  Square,
   ArrowRight,
   X
 } from 'lucide-react';
 
 /** One icon per printed range, in catalogue order. */
-const CATEGORY_ICONS: Record<ProductCategory, typeof Sparkles> = {
-  'premium-chocolate': Layers,
-  'brownie-indulgence': Square,
-  'cookie-cravings': Cookie,
-  'celebration-cakes': Cake,
-  'tea-cakes': Coffee,
-  'gourmet-cookies': Gift,
-  'cupcake-dreams': IceCreamCone,
-  'muffin-moments': Croissant,
-  'cheesecake-heaven': CakeSlice,
-};
+/*
+ * A fixed map from the nine opening ranges to their marks used to live here.
+ * The shop adds its own ranges now, so a range carries the name of its mark and
+ * `categoryIcon` resolves it -- with a fallback, because a range saved with a
+ * mark this build does not ship should put a cookie on the page rather than
+ * crash it.
+ */
 
 /**
  * "Why Ovenglow Delights?" -- the shop's five promises, in the owner's words.
@@ -82,6 +70,7 @@ interface ShopViewProps {
 export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
   const { 
     shopProducts,
+    shopCategories,
     selectedCategory, 
     setSelectedCategory, 
     searchQuery, 
@@ -95,11 +84,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
 
   const categories: { id: string; label: string; icon: typeof Sparkles }[] = [
     { id: 'all', label: 'Everything', icon: Sparkles },
-    ...PRODUCT_CATEGORIES.map((c) => ({
-      id: c.id as string,
-      label: c.label,
-      icon: CATEGORY_ICONS[c.id],
-    })),
+    ...shopCategories.map((c) => ({ id: c.id, label: c.label, icon: categoryIcon(c.icon) })),
   ];
 
   // Filtering
@@ -132,11 +117,13 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
    */
   const sections =
     selectedCategory === 'all'
-      ? PRODUCT_CATEGORIES.map((c) => ({
-          ...c,
-          icon: CATEGORY_ICONS[c.id],
-          items: filteredProducts.filter((p) => p.category === c.id),
-        })).filter((group) => group.items.length > 0)
+      ? shopCategories
+          .map((c) => ({
+            ...c,
+            icon: categoryIcon(c.icon),
+            items: filteredProducts.filter((p) => p.category === c.id),
+          }))
+          .filter((group) => group.items.length > 0)
       : null;
 
   const cardGrid = 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5';
@@ -270,7 +257,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onOpenProductDetails }) => {
               <>
                 <p className="text-lg text-[#2A1810] font-serif font-bold">The menu is being set up</p>
                 <p className="text-xs text-[#8C766B] max-w-md mx-auto">
-                  Our {PRODUCT_CATEGORIES.length} ranges are loaded but not yet priced and published.
+                  Our {shopCategories.length} ranges are loaded but not yet priced and published.
                   Message us on WhatsApp and we will take your order directly in the meantime.
                 </p>
               </>

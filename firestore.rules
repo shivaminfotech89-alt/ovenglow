@@ -11,8 +11,8 @@ rules_version = '2';
  *
  * The shape:
  *
- *   The catalogue, the banners and the shop's public settings are readable by
- *   the world and writable only by signed-in staff.
+ *   The catalogue, its categories, the banners and the shop's public settings
+ *   are readable by the world and writable only by signed-in staff.
  *
  *   Orders can be CREATED by anyone — a customer placing an order need not be
  *   signed in — but a query over orders returns either everything (staff) or
@@ -98,6 +98,23 @@ service cloud.firestore {
     }
 
     match /coupons/{couponId} {
+      allow read: if true;
+      allow create, update, delete: if isCatalogueEditor();
+    }
+
+    /**
+     * The ranges the menu is cut into, which the shop now owns rather than the
+     * code. World-readable for the same reason the catalogue is: the shop front
+     * has to work for someone who has never signed in, and a range's name is
+     * printed on the page anyway.
+     *
+     * Deleting one is refused in the app while products are still filed under
+     * it. That guard is not repeated here, and could not be: a rule cannot
+     * count the documents in another collection. It is a guard against a
+     * mistake in the admin, not against an attacker -- and an attacker who gets
+     * this far is a catalogue editor, who can delete the products themselves.
+     */
+    match /categories/{categoryId} {
       allow read: if true;
       allow create, update, delete: if isCatalogueEditor();
     }

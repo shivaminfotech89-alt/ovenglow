@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Copy, Download, Eye, EyeOff, Plus, Search, Trash2 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { ImageField } from './ImageField';
-import { PRODUCT_CATEGORIES, Product, ProductCategory, needsPricing } from '../../types';
+import { Product, ProductCategory, needsPricing } from '../../types';
+import { categoryLabel } from '../../lib/categories';
 import {
   Drawer,
   EmptyState,
@@ -45,6 +46,7 @@ const blankProduct = (): Omit<Product, 'id'> => ({
 export const ProductsScreen: React.FC = () => {
   const {
     products,
+    categories,
     updateProduct,
     addProduct,
     deleteProduct,
@@ -200,9 +202,10 @@ export const ProductsScreen: React.FC = () => {
           className={`${inputClass} w-auto`}
         >
           <option value="all">All categories</option>
-          {PRODUCT_CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
+              {c.isActive ? '' : ' (hidden)'}
             </option>
           ))}
         </select>
@@ -283,7 +286,7 @@ export const ProductsScreen: React.FC = () => {
                 >
                   <span className="block text-sm font-medium text-[#241510]">{p.name}</span>
                   <span className="mt-0.5 block text-[11px] text-[#8C766B]">
-                    {PRODUCT_CATEGORIES.find((c) => c.id === p.category)?.label}
+                    {categoryLabel(categories, p.category)}
                     {p.isSignature && <span className="ml-1.5 font-medium text-[#C58940]">· Signature</span>}
                   </span>
                   <span className="mt-0.5 block font-mono text-[10px] text-[#A69286]">{p.sku}</span>
@@ -435,7 +438,7 @@ export const ProductsScreen: React.FC = () => {
                       {p.name}
                     </button>
                     <span className="mt-0.5 block text-[10px] text-[#8C766B]">
-                      {PRODUCT_CATEGORIES.find((c) => c.id === p.category)?.label}
+                      {categoryLabel(categories, p.category)}
                       {p.isSignature && (
                         <span className="ml-1.5 font-medium text-[#C58940]">· Signature</span>
                       )}
@@ -610,17 +613,31 @@ export const ProductsScreen: React.FC = () => {
               />
             </Field>
           </div>
-          <Field label="Category">
+          <Field
+            label="Category"
+            hint="Ranges are added and renamed on the Categories screen."
+          >
             <select
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value as ProductCategory })}
               className={inputClass}
             >
-              {PRODUCT_CATEGORIES.map((c) => (
+              {/*
+                A product can be sitting on a range that no longer exists, so
+                its own value is offered even when the list has lost it. Without
+                this the select would show the first range instead and the next
+                save would quietly move the product there.
+              */}
+              {!categories.some((c) => c.id === form.category) && form.category && (
+                <option value={form.category}>{form.category} — range deleted</option>
+              )}
+              {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.label}
+                  {c.isActive ? '' : ' (hidden)'}
                 </option>
               ))}
+              {categories.length === 0 && <option value="">No ranges yet</option>}
             </select>
           </Field>
           <ImageField

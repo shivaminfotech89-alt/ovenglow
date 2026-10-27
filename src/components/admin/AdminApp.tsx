@@ -12,6 +12,7 @@ import {
   Users,
   UserCog,
   AlertCircle,
+  FolderTree,
   Sparkles,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
@@ -20,6 +21,7 @@ import { ToastHost, btnPrimary, inputClass } from './ui';
 import { DashboardScreen } from './DashboardScreen';
 import { OrdersScreen } from './OrdersScreen';
 import { ProductsScreen } from './ProductsScreen';
+import { CategoriesScreen } from './CategoriesScreen';
 import { CustomersScreen } from './CustomersScreen';
 import { SignatureScreen } from './SignatureScreen';
 import { CouponsScreen } from './CouponsScreen';
@@ -36,7 +38,8 @@ type ScreenId =
   | 'signature'
   | 'banners'
   | 'settings'
-  | 'staff';
+  | 'staff'
+  | 'categories';
 
 interface ScreenDef {
   id: ScreenId;
@@ -50,6 +53,7 @@ const SCREENS: ScreenDef[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'orders.view', render: () => <DashboardScreen /> },
   { id: 'orders', label: 'Orders', icon: ShoppingBag, permission: 'orders.view', render: () => <OrdersScreen /> },
   { id: 'products', label: 'Products & Inventory', icon: Package, permission: 'products.view', render: () => <ProductsScreen /> },
+  { id: 'categories', label: 'Categories', icon: FolderTree, permission: 'products.edit', render: () => <CategoriesScreen /> },
   { id: 'customers', label: 'Customers', icon: Users, permission: 'customers.view', render: () => <CustomersScreen /> },
   { id: 'signature', label: 'Signature Collection', icon: Sparkles, permission: 'products.edit', render: () => <SignatureScreen /> },
   { id: 'coupons', label: 'Coupons', icon: Tag, permission: 'marketing.manage', render: () => <CouponsScreen /> },

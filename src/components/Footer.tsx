@@ -3,7 +3,6 @@ import { OvenglowLogo } from './OvenglowLogo';
 import { VegMark } from './VegMark';
 import { FssaiMark } from './FssaiMark';
 import { useStore } from '../context/StoreContext';
-import { PRODUCT_CATEGORIES } from '../types';
 import { 
   ShieldCheck, 
   MessageSquare, 
@@ -20,6 +19,7 @@ export const Footer: React.FC = () => {
   const {
     setActiveTab,
     setSelectedCategory,
+    shopCategories,
     getWhatsAppSupportLink,
     setIsCustomerAuthOpen,
     storeSettings,
@@ -118,7 +118,7 @@ export const Footer: React.FC = () => {
         <div className="space-y-3">
           <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#C58940]">Our menu</span>
           <ul className="text-xs text-[#A69286]">
-            {PRODUCT_CATEGORIES.map((c) => (
+            {shopCategories.map((c) => (
               <li key={c.id}>
                 <button
                   onClick={() => {

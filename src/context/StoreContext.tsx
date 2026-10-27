@@ -14,6 +14,7 @@ import {
   PaymentMethod,
   CustomerDetails,
   CustomerUser,
+  Category,
   CustomerProfile,
   SalesReport,
   StaffUser,
@@ -36,6 +37,7 @@ import { calculateTotals, checkCoupon, OrderTotals } from '../lib/pricing';
 import { generateDeliveryOtp, generateId } from '../lib/ids';
 import { INITIAL_PRODUCTS } from '../data/initialProducts';
 import { INITIAL_COUPONS } from '../data/initialCoupons';
+import { INITIAL_CATEGORIES, categorySlug } from '../data/initialCategories';
 import { INITIAL_BANNERS } from '../data/initialBanners';
 import {
   patchMany,
@@ -152,6 +154,7 @@ const COL = {
   PRODUCTS: 'products',
   ORDERS: 'orders',
   COUPONS: 'coupons',
+  CATEGORIES: 'categories',
   BANNERS: 'banners',
   STAFF: 'staff',
   SETTINGS: 'settings',
@@ -381,6 +384,16 @@ interface StoreContextType {
   updateCoupon: (id: string, updates: Partial<Coupon>) => Promise<void>;
   deleteCoupon: (id: string) => Promise<void>;
 
+  // Categories -- the ranges the menu is cut into, owned by the shop
+  categories: Category[];
+  /** The ranges a customer sees: active, in the shop's order. */
+  shopCategories: Category[];
+  addCategory: (label: string, icon: string) => Promise<Result>;
+  updateCategory: (id: string, updates: Partial<Category>) => Promise<Result>;
+  /** Refuses while products are still filed under the range. */
+  deleteCategory: (id: string) => Promise<Result>;
+  moveCategory: (id: string, direction: -1 | 1) => Promise<Result>;
+
   // Banners
   banners: Banner[];
   addBanner: (b: Omit<Banner, 'id'>) => Promise<void>;
@@ -504,6 +517,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // earn a permission error on every page load of the public shop.
   const productsLive = useLiveCollection<Product>(COL.PRODUCTS);
   const couponsLive = useLiveCollection<Coupon>(COL.COUPONS);
+  const categoriesLive = useLiveCollection<Category>(COL.CATEGORIES);
   const bannersLive = useLiveCollection<Banner>(COL.BANNERS);
   /**
    * The signed-in person's own staff record, read on its own.
@@ -554,6 +568,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const products = productsLive.items;
   const coupons = couponsLive.items;
+
+  /**
+   * The menu's ranges, in the order the shop put them in.
+   *
+   * Sorted here rather than by the query: a `where`-free `orderBy` would be
+   * fine, but every other collection in this file arrives unsorted and sorting
+   * nine rows costs nothing. Ties fall back to the label so two ranges given
+   * the same position do not swap places between renders.
+   */
+  const categories = useMemo(
+    () =>
+      [...categoriesLive.items].sort(
+        (a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label),
+      ),
+    [categoriesLive.items],
+  );
+
+  /** The ranges a customer sees: the ones the shop has finished filling. */
+  const shopCategories = useMemo(
+    () => categories.filter((c) => c.isActive),
+    [categories],
+  );
   const banners = bannersLive.items;
   const storeSettings = settingsLive.value;
 
@@ -613,6 +649,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         staffLive.error ||
         myStaffLive.error ||
         couponsLive.error ||
+        categoriesLive.error ||
         bannersLive.error ||
         '',
     );
@@ -623,6 +660,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     staffLive.error,
     myStaffLive.error,
     couponsLive.error,
+    categoriesLive.error,
     bannersLive.error,
     reportStorage,
   ]);
@@ -726,7 +764,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!currentStaff || !can(currentStaff.role, 'products.edit')) return;
     // `ready` distinguishes "empty" from "not loaded yet". Seeding on the
     // latter would duplicate the entire catalogue.
-    if (!productsLive.ready || !couponsLive.ready || !bannersLive.ready || !settingsLive.ready) {
+    if (
+      !productsLive.ready ||
+      !couponsLive.ready ||
+      !bannersLive.ready ||
+      !settingsLive.ready ||
+      !categoriesLive.ready
+    ) {
       return;
     }
     seeded.current = true;
@@ -735,6 +779,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       try {
         if (products.length === 0) await putMany(COL.PRODUCTS, INITIAL_PRODUCTS);
         if (coupons.length === 0) await putMany(COL.COUPONS, INITIAL_COUPONS);
+        if (categories.length === 0) await putMany(COL.CATEGORIES, INITIAL_CATEGORIES);
         if (banners.length === 0) await putMany(COL.BANNERS, INITIAL_BANNERS);
 
         const settingsDoc = await getDoc(doc(db, COL.SETTINGS, SETTINGS_DOC));
@@ -754,6 +799,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     banners.length,
     productsLive.ready,
     couponsLive.ready,
+    categoriesLive.ready,
     bannersLive.ready,
     settingsLive.ready,
     reportStorage,
@@ -915,6 +961,125 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const clearCart = useCallback(() => setCart([]), [setCart]);
+
+  /* --------------------------------------------------------- categories -- */
+
+  /**
+   * Add a range to the menu.
+   *
+   * The id is derived from the name and then frozen. Products store the id, so
+   * a shop renaming "Tea Cakes" to "Everyday Cakes" later changes a label and
+   * nothing else -- which is only true because the two were never the same
+   * field.
+   */
+  const addCategory = useCallback(
+    async (label: string, icon: string): Promise<Result> => {
+      const name = label.trim();
+      if (!name) return { success: false, message: 'Give the range a name.' };
+
+      const id = categorySlug(name);
+      if (!id) {
+        return { success: false, message: 'Use some letters or numbers in the name.' };
+      }
+      if (categories.some((c) => c.id === id)) {
+        const clash = categories.find((c) => c.id === id);
+        return {
+          success: false,
+          message: `That is too close to "${clash?.label}" — they would share an address. Pick another name.`,
+        };
+      }
+
+      try {
+        await putRecord(COL.CATEGORIES, {
+          id,
+          label: name,
+          icon: icon || 'cookie',
+          // Added at the end, where someone who has just typed it expects to
+          // find it, rather than wherever the alphabet puts it.
+          sortOrder: categories.reduce((max, c) => Math.max(max, c.sortOrder), -1) + 1,
+          isActive: true,
+        });
+      } catch (e) {
+        return { success: false, message: writeFailure(e, 'add that range') };
+      }
+      return { success: true, message: `"${name}" added to the menu.` };
+    },
+    [categories],
+  );
+
+  const updateCategory = useCallback(
+    async (id: string, updates: Partial<Category>): Promise<Result> => {
+      // The id is the link to every product in the range; nothing may rewrite
+      // it, least of all a form that thinks it is editing a label.
+      const { id: _ignored, ...safe } = updates;
+      if (safe.label !== undefined && !safe.label.trim()) {
+        return { success: false, message: 'A range needs a name.' };
+      }
+      try {
+        await patchRecord(COL.CATEGORIES, id, safe);
+      } catch (e) {
+        return { success: false, message: writeFailure(e, 'save that range') };
+      }
+      return { success: true, message: 'Saved.' };
+    },
+    [],
+  );
+
+  /**
+   * Remove a range, but not out from under the products in it.
+   *
+   * A product carries its range as a string, so deleting the range does not
+   * delete or move anything -- it leaves those products filed under an address
+   * the menu no longer has, which on the shop front means they quietly stop
+   * appearing. Refusing while the range is in use is the whole guard, and the
+   * count is in the message because "move them first" is useless without
+   * knowing how many and where.
+   */
+  const deleteCategory = useCallback(
+    async (id: string): Promise<Result> => {
+      const inUse = products.filter((p) => p.category === id);
+      if (inUse.length > 0) {
+        return {
+          success: false,
+          message: `${inUse.length} ${inUse.length === 1 ? 'product is' : 'products are'} still in this range. Move ${inUse.length === 1 ? 'it' : 'them'} to another range first, and this will delete.`,
+        };
+      }
+      try {
+        await removeRecord(COL.CATEGORIES, id);
+      } catch (e) {
+        return { success: false, message: writeFailure(e, 'delete that range') };
+      }
+      return { success: true, message: 'Range deleted.' };
+    },
+    [products],
+  );
+
+  /** Move a range one place up or down the menu. */
+  const moveCategory = useCallback(
+    async (id: string, direction: -1 | 1): Promise<Result> => {
+      const order = [...categories];
+      const from = order.findIndex((c) => c.id === id);
+      const to = from + direction;
+      if (from < 0 || to < 0 || to >= order.length) return { success: true, message: '' };
+
+      const [moved] = order.splice(from, 1);
+      order.splice(to, 0, moved);
+      try {
+        // Renumbered from zero rather than swapping two values: the stored
+        // numbers drift as ranges are added and deleted, and a swap between two
+        // rows that already share a number does nothing at all.
+        await Promise.all(
+          order.map((c, i) =>
+            c.sortOrder === i ? null : patchRecord(COL.CATEGORIES, c.id, { sortOrder: i }),
+          ),
+        );
+      } catch (e) {
+        return { success: false, message: writeFailure(e, 'reorder the menu') };
+      }
+      return { success: true, message: '' };
+    },
+    [categories],
+  );
 
   /* ------------------------------------------------------------ coupons -- */
 
@@ -1763,6 +1928,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     addCoupon,
     updateCoupon,
     deleteCoupon,
+
+    categories,
+    shopCategories,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    moveCategory,
 
     banners,
     addBanner,

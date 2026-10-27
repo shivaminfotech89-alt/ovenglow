@@ -4,29 +4,39 @@ import { StaffRole } from './lib/permissions';
 /** What a mutation did, and what to tell the person who asked for it. */
 export type Result = { success: boolean; message: string };
 
-export type ProductCategory =
-  | 'premium-chocolate'
-  | 'brownie-indulgence'
-  | 'cookie-cravings'
-  | 'celebration-cakes'
-  | 'tea-cakes'
-  | 'gourmet-cookies'
-  | 'cupcake-dreams'
-  | 'muffin-moments'
-  | 'cheesecake-heaven';
+/**
+ * A range's id, as stored on a product.
+ *
+ * This used to be a union of the nine ranges the shop opened with, which made
+ * the catalogue's shape a fact about the code: adding a tenth meant a developer
+ * and a deploy. The shop adds its own ranges now, so the type is an id and the
+ * list of real ones lives in the `categories` collection -- the storefront's
+ * filter pills, the catalogue's sections and every picker read it from there.
+ *
+ * The looser type is the cost. Nothing stops a typo in a product's category
+ * now, so the places that matter check: the product form offers a list rather
+ * than a text box, and a product whose range has been deleted keeps it on
+ * screen instead of being silently moved.
+ */
+export type ProductCategory = string;
 
-/** The nine ranges from the Oven Glow Delights catalogue, in catalogue order. */
-export const PRODUCT_CATEGORIES: { id: ProductCategory; label: string }[] = [
-  { id: 'premium-chocolate', label: 'Premium Chocolate' },
-  { id: 'brownie-indulgence', label: 'Brownie Indulgence' },
-  { id: 'cookie-cravings', label: 'Cookie Cravings' },
-  { id: 'celebration-cakes', label: 'Celebration Cakes' },
-  { id: 'tea-cakes', label: 'Tea Cakes' },
-  { id: 'gourmet-cookies', label: 'Gourmet Cookies' },
-  { id: 'cupcake-dreams', label: 'Cupcake Dreams' },
-  { id: 'muffin-moments', label: 'Muffin Moments' },
-  { id: 'cheesecake-heaven', label: 'Cheesecake Heaven' },
-];
+/** A range of the menu, as the shop defines it. */
+export interface Category {
+  /** The slug stored on products, e.g. `premium-chocolate`. Never changes. */
+  id: string;
+  label: string;
+  /**
+   * A name from CATEGORY_ICON_CHOICES in src/lib/categories.ts, not a
+   * component and not a URL: a range is drawn with one of a fixed set of marks,
+   * so the shop can pick one without a developer and without the storefront
+   * loading anything.
+   */
+  icon: string;
+  /** Position in the menu. Ties fall back to the label. */
+  sortOrder: number;
+  /** A range being prepared can be hidden from the shop while it is filled. */
+  isActive: boolean;
+}
 
 export interface Product {
   id: string;

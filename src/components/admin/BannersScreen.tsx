@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { Banner, BannerSlot, PRODUCT_CATEGORIES, ProductCategory } from '../../types';
+import { Banner, BannerSlot, ProductCategory } from '../../types';
 import { ImageField } from './ImageField';
 import { Drawer, EmptyState, Field, btnGhost, btnPrimary, inputClass, useToast } from './ui';
 
@@ -23,7 +23,7 @@ const blank = (slot: BannerSlot): Omit<Banner, 'id'> => ({
 });
 
 export const BannersScreen: React.FC = () => {
-  const { banners, addBanner, updateBanner, deleteBanner } = useStore();
+  const { banners, categories, addBanner, updateBanner, deleteBanner } = useStore();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Omit<Banner, 'id'>>(blank('hero'));
@@ -122,7 +122,7 @@ export const BannersScreen: React.FC = () => {
                           className={inputClass}
                         >
                           <option value="">— not linked —</option>
-                          {PRODUCT_CATEGORIES.map((c) => (
+                          {categories.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.label}
                             </option>
@@ -262,7 +262,7 @@ export const BannersScreen: React.FC = () => {
               className={inputClass}
             >
               <option value="">— not linked —</option>
-              {PRODUCT_CATEGORIES.map((c) => (
+              {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.label}
                 </option>

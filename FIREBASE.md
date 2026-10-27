@@ -6,7 +6,7 @@ What the shop runs on, and what to click if any of it ever needs doing again.
 
 | | Where it lives | Who can read it | Who can change it |
 |---|---|---|---|
-| Menu, banners, coupons | Firestore | anyone | signed-in staff |
+| Menu, its categories, banners, coupons | Firestore | anyone | signed-in staff |
 | Shop settings, UPI id | Firestore | anyone | Super Admin |
 | Orders | Firestore | staff, the customer who placed it, or whoever holds its private id | staff |
 | A customer's name and address | Firestore | that customer, and staff | that customer |
@@ -46,8 +46,11 @@ paste one into a chat.
    your domain is under Settings → Authorised domains.
 6. Go to `/#staff` and sign in (see below). The storefront has no Staff
    button by design.
-7. The catalogue, coupons, banners and default settings upload themselves the
-   first time a Super Admin signs in to an empty database.
+7. The catalogue, its nine categories, the coupons, the banners and the default
+   settings upload themselves the first time a Super Admin signs in to an empty
+   database. After that the shop owns the category list — Admin → Categories
+   adds, renames, reorders, hides and deletes ranges. A range's address (its
+   id) is what products store, so renaming one leaves the products in it.
 
 ### Why it asks you to confirm your email
 
@@ -178,7 +181,7 @@ all.
 Edit `firestore.rules`, then:
 
 ```sh
-npm run rules:test     # 69 assertions against the real rules engine
+npm run rules:test     # 76 assertions against the real rules engine
 npm run rules:deploy   # needs `npx firebase login` first
 ```
 

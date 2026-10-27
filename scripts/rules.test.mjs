@@ -140,6 +140,12 @@ function section(title) {
 await env.withSecurityRulesDisabled(async (ctx) => {
   const db = ctx.firestore();
   await setDoc(doc(db, 'products/p1'), { name: 'Brownie', price: 250, isPublished: true });
+  await setDoc(doc(db, 'categories/tea-cakes'), {
+    label: 'Tea Cakes',
+    icon: 'coffee',
+    sortOrder: 4,
+    isActive: true,
+  });
   await setDoc(doc(db, 'settings/store'), { storeName: 'Ovenglow Delights' });
   await setDoc(doc(db, 'staff/manager-uid'), {
     email: 'manager@example.com',
@@ -185,6 +191,18 @@ await check('can read the catalogue', () =>
   assertSucceeds(getDoc(doc(stranger, 'products/p1'))));
 await check('can read the shop settings', () =>
   assertSucceeds(getDoc(doc(stranger, 'settings/store'))));
+await check('can read the menu\u2019s ranges', () =>
+  assertSucceeds(getDocs(collection(stranger, 'categories'))));
+await check('CANNOT add a range', () =>
+  assertFails(
+    setDoc(doc(stranger, 'categories/free-cake'), {
+      label: 'Free cake',
+      icon: 'cake',
+      sortOrder: 0,
+      isActive: true,
+    })));
+await check('CANNOT delete a range', () =>
+  assertFails(deleteDoc(doc(stranger, 'categories/tea-cakes'))));
 await check('CANNOT change a price', () =>
   assertFails(updateDoc(doc(stranger, 'products/p1'), { price: 1 })));
 await check('CANNOT add a product', () =>
@@ -355,6 +373,10 @@ await check('can move an order along', () =>
     })));
 await check('CANNOT change a price', () =>
   assertFails(updateDoc(doc(manager, 'products/p1'), { price: 1 })));
+// A range is part of the catalogue, so it answers to the same permission a
+// price does rather than to "any staff member".
+await check('CANNOT rename a range', () =>
+  assertFails(updateDoc(doc(manager, 'categories/tea-cakes'), { label: 'Everyday Cakes' })));
 await check('CANNOT change the shop settings', () =>
   assertFails(updateDoc(doc(manager, 'settings/store'), { gstPercent: 0 })));
 await check('CANNOT promote themselves', () =>
@@ -474,6 +496,18 @@ await check('staff can read a customer record', () =>
   assertSucceeds(getDoc(doc(manager, 'customers/outsider-uid'))));
 await check('staff can still list every order', () =>
   assertSucceeds(getDocs(collection(manager, 'orders'))));
+await check('an owner can add a range', () =>
+  assertSucceeds(
+    setDoc(doc(owner, 'categories/festive-hampers'), {
+      label: 'Festive Hampers',
+      icon: 'gift',
+      sortOrder: 9,
+      isActive: true,
+    })));
+await check('an owner can rename a range', () =>
+  assertSucceeds(updateDoc(doc(owner, 'categories/tea-cakes'), { label: 'Everyday Cakes' })));
+await check('an owner can delete a range', () =>
+  assertSucceeds(deleteDoc(doc(owner, 'categories/festive-hampers'))));
 
 await env.cleanup();
 

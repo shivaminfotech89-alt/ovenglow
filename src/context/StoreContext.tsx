@@ -585,11 +585,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [categoriesLive.items],
   );
 
-  /** The ranges a customer sees: the ones the shop has finished filling. */
-  const shopCategories = useMemo(
-    () => categories.filter((c) => c.isActive),
-    [categories],
-  );
+  /**
+   * The ranges a customer sees: the ones the shop has finished filling.
+   *
+   * Falls back to the ranges the shop opened with when the collection could not
+   * be read at all -- a missing `categories` rule, most likely, which is
+   * exactly what happened the first time this shipped. An unreadable list is
+   * not an empty one: the products are still filed under those nine ids, so
+   * showing them keeps the menu honest and whole, where showing nothing left a
+   * shop full of stock looking shut.
+   *
+   * A list that reads cleanly and comes back empty is respected. That is a shop
+   * that deleted its ranges, and second-guessing it would resurrect them.
+   */
+  const shopCategories = useMemo(() => {
+    if (categoriesLive.error) return INITIAL_CATEGORIES.filter((c) => c.isActive);
+    return categories.filter((c) => c.isActive);
+  }, [categories, categoriesLive.error]);
   const banners = bannersLive.items;
   const storeSettings = settingsLive.value;
 
@@ -773,6 +785,31 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     ) {
       return;
     }
+
+    /*
+     * And a read that failed is not an empty collection either.
+     *
+     * A refused listener reports `ready` with an empty list, because there is
+     * nothing else it can say. Seeding on that meant the first missing rule
+     * produced two errors -- the read, and then a write that was never going
+     * to be allowed -- and the second one buried the first. Worse, where the
+     * read is refused and the write is not, it would upload the starting
+     * catalogue on top of a shop that already had one.
+     */
+    const failed = [
+      productsLive.error && 'products',
+      couponsLive.error && 'coupons',
+      bannersLive.error && 'banners',
+      settingsLive.error && 'settings',
+      categoriesLive.error && 'categories',
+    ].filter(Boolean);
+    if (failed.length > 0) {
+      reportStorage(
+        `Could not read ${failed.join(', ')}, so the shop was not set up. Publish firestore.rules in the Firebase console — a collection with no rule is denied.`,
+      );
+      return;
+    }
+
     seeded.current = true;
 
     void (async () => {
@@ -789,7 +826,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch (e) {
         console.error('Could not set up the shop:', e);
         seeded.current = false;
-        reportStorage('Could not load the starting catalogue. Check the Firestore rules.');
+        reportStorage(
+          'Could not write the starting catalogue. Publish firestore.rules in the Firebase console (Firestore Database → Rules), then reload.',
+        );
       }
     })();
   }, [
@@ -797,6 +836,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     products.length,
     coupons.length,
     banners.length,
+    productsLive.error,
+    couponsLive.error,
+    bannersLive.error,
+    settingsLive.error,
+    categoriesLive.error,
     productsLive.ready,
     couponsLive.ready,
     categoriesLive.ready,

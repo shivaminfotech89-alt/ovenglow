@@ -959,6 +959,49 @@ check(
   'the account came back empty, which is the whole thing the shop asked for',
 );
 
+/* --------------------------------------- the shop with no ranges to show */
+
+/**
+ * A shop with stock in it never looks shut, whatever happened to its ranges.
+ *
+ * The catalogue is grouped by the `categories` collection, and the first
+ * version of that grouping rendered the section list regardless of whether
+ * there were any sections -- so a range list that failed to load, or products
+ * all filed under hidden or deleted ranges, left every product on the shop
+ * front behind a blank space. Three products in the database, nothing on the
+ * page, and no "the menu is being set up" either.
+ *
+ * Emptying the collection here is the cheap half of that: it proves the page
+ * falls back to one plain grid. (The other half -- a read refused outright,
+ * which is what a missing Firestore rule does -- was reproduced by running this
+ * shop against rules with no `categories` block: zero products before the fix,
+ * all of them after.)
+ */
+const allRanges = await fetch(`${REST}/categories`, {
+  headers: { Authorization: 'Bearer owner' },
+}).then((r) => r.json());
+await Promise.all(
+  (allRanges.documents ?? []).map((d) =>
+    fetch(`${REST}/categories/${d.name.split('/').pop()}`, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer owner' },
+    }),
+  ),
+);
+
+const rangeless = await openContext('rangeless');
+await rangeless.page.waitForTimeout(2500);
+const stillSelling = await rangeless.page
+  .locator('#product-catalog-grid [id^="btn-add-product-"]')
+  .count();
+check(
+  'a shop with no ranges still shows what it sells',
+  stillSelling > 0,
+  `${stillSelling} products on the page with the range list emptied`,
+);
+await rangeless.page.screenshot({ path: `${SHOTS}/e2e-no-ranges.png` });
+await rangeless.ctx.close();
+
 console.log(`\nbuyer console errors:    ${buyer.errors.length ? buyer.errors.slice(0, 4) : 'none'}`);
 console.log(`member console errors:   ${member.errors.length ? member.errors.slice(0, 4) : 'none'}`);
 

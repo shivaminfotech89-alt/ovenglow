@@ -13,6 +13,7 @@ import {
   UserCog,
   AlertCircle,
   FolderTree,
+  GalleryHorizontal,
   Sparkles,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
@@ -26,6 +27,7 @@ import { CustomersScreen } from './CustomersScreen';
 import { SignatureScreen } from './SignatureScreen';
 import { CouponsScreen } from './CouponsScreen';
 import { BannersScreen } from './BannersScreen';
+import { HeroSlidesScreen } from './HeroSlidesScreen';
 import { SettingsScreen } from './SettingsScreen';
 import { StaffScreen } from './StaffScreen';
 
@@ -39,7 +41,8 @@ type ScreenId =
   | 'banners'
   | 'settings'
   | 'staff'
-  | 'categories';
+  | 'categories'
+  | 'hero';
 
 interface ScreenDef {
   id: ScreenId;
@@ -57,6 +60,7 @@ const SCREENS: ScreenDef[] = [
   { id: 'customers', label: 'Customers', icon: Users, permission: 'customers.view', render: () => <CustomersScreen /> },
   { id: 'signature', label: 'Signature Collection', icon: Sparkles, permission: 'products.edit', render: () => <SignatureScreen /> },
   { id: 'coupons', label: 'Coupons', icon: Tag, permission: 'marketing.manage', render: () => <CouponsScreen /> },
+  { id: 'hero', label: 'Hero Slides', icon: GalleryHorizontal, permission: 'marketing.manage', render: () => <HeroSlidesScreen /> },
   { id: 'banners', label: 'Images & Banners', icon: ImageIcon, permission: 'marketing.manage', render: () => <BannersScreen /> },
   { id: 'settings', label: 'Settings', icon: SettingsIcon, permission: 'settings.manage', render: () => <SettingsScreen /> },
   { id: 'staff', label: 'Staff', icon: UserCog, permission: 'staff.manage', render: () => <StaffScreen /> },

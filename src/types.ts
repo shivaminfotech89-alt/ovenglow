@@ -203,11 +203,16 @@ export interface Banner {
   buttonText: string;
   image: string;
   /**
+   * A third line, under the subtitle. Optional, and usually left out: a hero
+   * slide read in two seconds while scrolling is not the place for a paragraph.
+   */
+  body?: string;
+  /**
    * The discount, in the shop's own words: "Flat 100 off your first box".
    *
-   * A hero slide needs this or a `couponCode` to be shown at all. The hero
-   * carousel is the shop's own slide plus what is on offer; a hero banner with
-   * neither is a second brand slide competing with the first.
+   * Optional. A hero slide with no offer at all is an ordinary slide -- a
+   * photograph and a line about what the shop bakes -- which is most of what a
+   * shop wants to put on its front page.
    */
   offerText?: string;
   /**

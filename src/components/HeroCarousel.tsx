@@ -6,23 +6,31 @@ import { Banner, Coupon } from '../types';
 import { formatRupees } from '../lib/pricing';
 
 /**
- * The hero, as a carousel.
+ * The hero, as a carousel the shop writes.
  *
- * It used to be one fixed panel, which meant the shop's offers lived nowhere on
- * the first screen: a running discount was a code in the announcement bar and
- * nothing else. The `banners` collection and its admin screen existed the whole
- * time and nothing on the storefront ever read them.
+ * It used to be one fixed panel, and then one fixed panel plus whatever offers
+ * were running. Every slide is the shop's now: a photograph, a headline, a line
+ * under it, an optional discount, a button and a number saying where in the
+ * run it goes. Admin -> Hero Slides.
  *
- * Now the first slide is the shop -- who it is, what it sells, and that the
- * kitchen is entirely vegetarian -- and the slides after it are what is on
- * offer, written by the shop in Admin -> Banners.
- *
- * An offer slide has to carry an offer. A hero banner with no coupon and no
- * offer line is a second brand slide competing with the first, so it is not
- * shown; the Banners screen says so beside the field. This also means the
- * headline here cannot be stranded by a slide left in the database from an
- * earlier version of the site.
+ * The slide below stands in when the shop has written none, so a new shop is
+ * never looking at an empty panel. It is not mixed in with the shop's own: once
+ * there is a first slide, that is the first slide.
  */
+
+/**
+ * A photo's address, safe to drop into `background-image`.
+ *
+ * Quoted, and with quotes and backslashes inside it escaped. An unquoted
+ * `url(...)` cannot contain brackets, commas or spaces, which is most data URLs
+ * and a fair number of ordinary ones -- the first version of this shipped
+ * unquoted and the picture simply never appeared, with nothing in the console
+ * to say why. The quoting is also what stops a URL the shop pasted from closing
+ * the declaration and writing CSS of its own.
+ */
+function cssUrl(src: string): string {
+  return `url("${src.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}")`;
+}
 
 /** How long each slide holds before the next, in milliseconds. */
 const DWELL = 6500;
@@ -33,11 +41,13 @@ interface Slide {
   title: string;
   /** Rendered in the brand's gold italic, under the title. */
   accent?: string;
-  body: string;
+  body?: string;
   /** The discount, in the shop's own words or taken from a live coupon. */
   offer?: string;
   /** The coupon to quote, once it has been checked against the coupon table. */
   code?: string;
+  /** A photograph behind the words. Without one the oven artwork shows. */
+  photo?: string;
   cta: string;
   onCta: () => void;
 }
@@ -70,39 +80,48 @@ export const HeroCarousel: React.FC = () => {
   const hasSignature = products.some((p) => p.isSignature);
 
   const slides = useMemo<Slide[]>(() => {
-    const brand: Slide = {
-      key: 'brand',
-      eyebrow: `Baked fresh daily in ${storeSettings.city}`,
-      title: 'Artisanal Premium Chocolates & Baked Items',
-      body: `Chocolates, cakes, cookies, brownies, cupcakes, muffins and cheesecakes — made to order in a 100% vegetarian, eggless kitchen and delivered across ${storeSettings.city}.`,
-      cta: 'See the menu',
-      onCta: () => goToMenu(),
-    };
-
-    const offers = banners
+    const own = banners
       .filter((b: Banner) => b.slot === 'hero' && b.isActive)
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((b: Banner): Slide | null => {
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title))
+      .map((b: Banner): Slide => {
+        // Read from the coupon table rather than typed into the slide, so a
+        // slide cannot go on advertising 20% off after the code has been
+        // changed to 10%.
         const coupon = b.couponCode
           ? coupons.find((c) => c.code.toUpperCase() === b.couponCode?.trim().toUpperCase())
           : undefined;
         const offer = coupon ? describeCoupon(coupon) : b.offerText?.trim();
-        if (!offer) return null;
         return {
           key: b.id,
-          eyebrow: 'Offer on now',
+          eyebrow: offer ? 'Offer on now' : `Baked fresh daily in ${storeSettings.city}`,
           title: b.title,
           accent: b.subtitle,
-          body: '',
+          body: b.body,
           offer,
-          code: coupon?.code ?? b.couponCode?.trim().toUpperCase(),
-          cta: b.buttonText || 'Shop the offer',
+          code: offer ? coupon?.code ?? b.couponCode?.trim().toUpperCase() : undefined,
+          photo: b.image?.trim() || undefined,
+          cta: b.buttonText || 'See the menu',
           onCta: () => goToMenu(b.linkedCategory),
         };
-      })
-      .filter((s): s is Slide => s !== null);
+      });
 
-    return [brand, ...offers];
+    if (own.length > 0) return own;
+
+    /*
+     * Nothing written yet. One slide about the shop, so the front page is
+     * never a blank panel -- a shop setting itself up should see something
+     * that looks like a shop.
+     */
+    return [
+      {
+        key: 'brand',
+        eyebrow: `Baked fresh daily in ${storeSettings.city}`,
+        title: 'Artisanal Premium Chocolates & Baked Items',
+        body: `Chocolates, cakes, cookies, brownies, cupcakes, muffins and cheesecakes — made to order in a 100% vegetarian, eggless kitchen and delivered across ${storeSettings.city}.`,
+        cta: 'See the menu',
+        onCta: () => goToMenu(),
+      },
+    ];
   }, [banners, coupons, storeSettings.city, goToMenu]);
 
   const [index, setIndex] = useState(0);
@@ -114,6 +133,8 @@ export const HeroCarousel: React.FC = () => {
   useEffect(() => {
     if (index > slides.length - 1) setIndex(0);
   }, [index, slides.length]);
+
+  const showPhoto = Boolean(slides[Math.min(index, slides.length - 1)]?.photo);
 
   const go = useCallback(
     (next: number) => setIndex(((next % slides.length) + slides.length) % slides.length),
@@ -189,9 +210,63 @@ export const HeroCarousel: React.FC = () => {
         }}
         className="relative flex min-h-[21rem] items-center overflow-hidden rounded-3xl border border-[#48281B] bg-gradient-to-br from-[#1C0E08] via-[#2A140B] to-[#120704] p-6 text-white shadow-[0_20px_50px_-15px_rgba(229,169,60,0.18),0_0_35px_-5px_rgba(255,122,24,0.12)] sm:min-h-[24rem] sm:p-10 lg:min-h-[27rem] lg:p-14"
       >
+        {/*
+          The slide's photograph, if it has one.
+          
+          Crossfaded rather than swapped: every slide's picture is mounted and
+          only the current one is opaque, so moving between slides does not
+          blink white while the next file is fetched. `aria-hidden`, because the
+          words beside it already say what it is.
+        */}
+        {slides.map((slide, i) =>
+          slide.photo ? (
+            <div
+              key={`photo-${slide.key}`}
+              aria-hidden="true"
+              style={{ backgroundImage: cssUrl(slide.photo) }}
+              className={`pointer-events-none absolute inset-0 bg-cover bg-center transition-opacity duration-500 ${
+                i === index ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          ) : null,
+        )}
+
+        {/*
+          And a scrim over it, heaviest on the left where the words are.
+          
+          A photograph the shop chose is a photograph of a cake, not a backdrop
+          designed for white text, so the contrast cannot be left to luck. This
+          is the whole reason a picture can be dropped in without anyone
+          checking it reads.
+        */}
+        {showPhoto && (
+          <>
+            {/*
+              Two scrims, because the words sit differently at the two sizes.
+              
+              On a wide screen the copy is held in the left column and the
+              picture has the right half to itself, so the veil fades out across
+              it. On a phone the copy runs the full width -- the gold second
+              line ran straight over the bright part of the photograph and
+              became unreadable -- so there the veil is even, and heavier.
+            */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-[#130905]/78 lg:hidden"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 hidden bg-gradient-to-r from-[#130905]/88 via-[#130905]/55 to-[#130905]/10 lg:block"
+            />
+          </>
+        )}
+
         {/* ========================================================= */}
         {/* LIGHT OVEN GLOW BACKGROUND LAYERS */}
+        {/* Hidden behind a photograph: two backgrounds arguing is worse */}
+        {/* than either. */}
         {/* ========================================================= */}
+        <div className={showPhoto ? 'hidden' : 'contents'}>
 
         {/* 1. Primary Gentle Hearth Radiant Glow */}
         <div 
@@ -295,6 +370,8 @@ export const HeroCarousel: React.FC = () => {
             />
           </div>
         </div>
+        </div>
+
           {/* Hero content.
 
               Capped at max-w-xl so the paragraph stays near sixty characters a

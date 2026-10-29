@@ -23,7 +23,7 @@ export const INITIAL_BANNERS: Banner[] = [
     image: '',
     linkedCategory: 'premium-chocolate',
     isActive: true,
-    sortOrder: 0,
+    sortOrder: 1,
   },
   {
     id: 'banner-hero-delivery',
@@ -35,7 +35,7 @@ export const INITIAL_BANNERS: Banner[] = [
     image: '',
     linkedCategory: 'celebration-cakes',
     isActive: true,
-    sortOrder: 1,
+    sortOrder: 2,
   },
   {
     id: 'banner-cat-1',

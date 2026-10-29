@@ -323,6 +323,41 @@ check(
   JSON.stringify(deleteState),
 );
 
+/* ---------------------------------------------- hero slides, from the admin */
+
+/**
+ * The shop writes a slide and it reaches the shop front.
+ *
+ * The hero was code, then code plus coupons. This is the whole of what the shop
+ * asked for: add a slide, give it lines and a number, and have it show.
+ */
+await admin.page.locator('button:visible', { hasText: /^Hero Slides$/ }).first().click();
+await admin.page.waitForTimeout(1500);
+await admin.page.locator('#btn-add-hero-slide').click();
+await admin.page.waitForTimeout(600);
+await admin.page.fill('#hero-title', 'Written in the console');
+await admin.page.fill('#hero-subtitle', 'A second line, in gold.');
+await admin.page.fill('#hero-body', 'And a third, for the detail.');
+await admin.page.fill('#hero-offer', 'Two for one on brownies');
+await admin.page.fill('#hero-number', '1');
+await admin.page.locator('#btn-save-hero-slide').click();
+await admin.page.waitForTimeout(2500);
+check(
+  'a slide written in the console is listed',
+  await admin.page.evaluate(() => /Written in the console/.test(document.body.innerText)),
+);
+
+/*
+ * Push the slide the shop opened with out of first place by typing a number at
+ * it. The shop asked for numbers rather than dragging, so the number field in
+ * the row is the thing that has to work -- not only the one in the form.
+ */
+await admin.page
+  .locator('input[aria-label="Slide number for Festive boxes, ready to gift"]')
+  .fill('5');
+await admin.page.waitForTimeout(1800);
+await admin.page.screenshot({ path: `${SHOTS}/e2e-admin-hero-slides.png` });
+
 // And the product form offers it without a reload.
 await admin.page.locator('button:visible', { hasText: /Products/ }).first().click();
 await admin.page.waitForTimeout(1500);
@@ -486,29 +521,47 @@ await seedDoc('coupons/e2e-deal', {
   timesUsed: { integerValue: '0' },
 });
 
-// An offer slide: the amount is read from the coupon, not from the banner.
+// An offer slide, with a photograph: the amount is read from the coupon, not
+// from the slide.
 await seedDoc('banners/e2e-hero-offer', {
   slot: { stringValue: 'hero' },
   title: { stringValue: 'Boxes for the season' },
   subtitle: { stringValue: 'Chocolate and cookies, boxed.' },
+  body: { stringValue: 'Made to order in small batches.' },
   buttonText: { stringValue: 'Shop the offer' },
   couponCode: { stringValue: 'E2EDEAL' },
-  image: { stringValue: '' },
+  /*
+   * An inline picture, so the assertion is about the slide painting what it
+   * was given rather than about a network fetch succeeding.
+   *
+   * SVG rather than a base64 GIF, and deliberately: it contains brackets. An
+   * unquoted CSS `url(...)` may not, so this is the fixture that catches the
+   * bug the first version shipped with -- the picture never appeared, and
+   * nothing was logged. A base64 GIF has no brackets and passed either way.
+   */
+  image: {
+    stringValue:
+      'data:image/svg+xml;utf8,' +
+      encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8">' +
+          '<rect width="8" height="8" fill="rgb(200,140,70)"/></svg>',
+      ),
+  },
   linkedCategory: { stringValue: 'premium-chocolate' },
   isActive: { booleanValue: true },
-  sortOrder: { integerValue: '0' },
+  sortOrder: { integerValue: '3' },
 });
 
-// And one with no offer, which must not become a slide.
+// And one with no offer at all, which is an ordinary slide now.
 await seedDoc('banners/e2e-hero-empty', {
   slot: { stringValue: 'hero' },
   title: { stringValue: 'Nothing on offer here' },
-  subtitle: { stringValue: 'Left from an earlier version of the site.' },
+  subtitle: { stringValue: 'Just a line about the bakery.' },
   buttonText: { stringValue: 'See the menu' },
   image: { stringValue: '' },
   linkedCategory: { stringValue: 'premium-chocolate' },
   isActive: { booleanValue: true },
-  sortOrder: { integerValue: '1' },
+  sortOrder: { integerValue: '4' },
 });
 
 await seedDoc('products/e2e-checkout', {
@@ -574,36 +627,58 @@ check(
 /* ------------------------------------------------- the hero, as a carousel */
 
 /**
- * The hero opens on the shop and then shows what is on offer.
+ * Every hero slide is the shop's own.
  *
  * The `banners` collection and its admin screen existed from the start and
- * nothing on the storefront ever read them, so a running discount lived in the
- * announcement bar and nowhere else. These check the three things that can go
- * wrong: the shop's own slide is first and says what the shop now sells, a
- * banner carrying a coupon becomes a slide quoting that coupon's real value,
- * and a hero banner with no offer at all is not shown.
+ * nothing on the storefront read them, so a running discount lived in the
+ * announcement bar and nowhere else. Then the hero opened with a slide written
+ * in the code and showed the shop's only after it.
+ *
+ * Now the shop writes all of them, and the built-in slide stands in only when
+ * there are none. These check what can go wrong with that: a slide reaches the
+ * shop front at all, one carrying a coupon quotes that coupon's real value, one
+ * carrying no offer still shows (it used to be dropped), and the photograph
+ * actually gets painted.
  */
-check(
-  'the hero opens on what the shop sells',
-  (await buyer.page.locator('#hero-showcase-banner h1:visible').innerText()).includes(
-    'Artisanal Premium Chocolates',
-  ),
-);
-
 const dots = buyer.page.locator('#hero-showcase-banner [role=tablist] button');
 check('the hero is a carousel', (await dots.count()) >= 2, `${await dots.count()} slides`);
 
+/**
+ * Slide number 1 is the slide shown first.
+ *
+ * The shop asked for numbers rather than dragging, so the number has to be the
+ * thing that decides. The console slide above was given 1 while the seeded ones
+ * hold 2 and 3.
+ */
+check(
+  'the slide numbered 1 is the one shown first',
+  (await buyer.page.locator('#hero-showcase-banner h1:visible').innerText()).includes(
+    'Written in the console',
+  ),
+  await buyer.page.locator('#hero-showcase-banner h1:visible').innerText(),
+);
+
+check(
+  "the shop's own slide replaces the built-in one",
+  !(await buyer.page.evaluate(() => document.body.innerText)).includes(
+    'Artisanal Premium Chocolates',
+  ),
+  'the code\u2019s slide is still showing even though the shop has written its own',
+);
+
 // Every slide in turn, rather than a fixed position: the catalogue seed adds
-// its own offer banners on first sign-in and the order between two slides that
-// share a sortOrder is nobody's to promise.
+// its own slides on first sign-in and the order between two that share a number
+// is nobody's to promise.
 let quoted = '';
-for (let i = 1; i < (await dots.count()); i += 1) {
+let plain = '';
+for (let i = 0; i < (await dots.count()); i += 1) {
   await dots.nth(i).click();
   await buyer.page.waitForTimeout(600);
   const text = await buyer.page.evaluate(
     () => document.querySelector('#hero-showcase-banner')?.innerText ?? '',
   );
   if (/E2EDEAL/.test(text)) quoted = text;
+  if (/Nothing on offer here/.test(text)) plain = text;
 }
 check(
   'an offer slide quotes the discount and the code',
@@ -611,12 +686,28 @@ check(
   quoted ? quoted.replace(/\s+/g, ' ').slice(0, 160) : 'no slide quoted the seeded coupon',
 );
 check(
-  'a hero banner with no offer is not a slide',
-  !/Nothing on offer here/.test(
-    await buyer.page.evaluate(() => document.body.innerText),
-  ),
+  'a slide with no offer is shown too, not dropped',
+  plain.length > 0,
+  'the hero still refuses a slide that is only a picture and a line',
 );
 await buyer.page.screenshot({ path: `${SHOTS}/e2e-hero-offer.png` });
+
+/**
+ * The photograph is painted.
+ *
+ * A slide's picture was stored, shown in the admin, and ignored by the shop
+ * front for as long as the carousel existed. Asserting the element carries a
+ * background image is the difference between "the field saves" and "the field
+ * does something".
+ */
+const photoPainted = await buyer.page.evaluate(() => {
+  const panel = document.querySelector('#hero-showcase-banner');
+  return [...(panel?.querySelectorAll('div') ?? [])].some((el) =>
+    /url\(/.test(getComputedStyle(el).backgroundImage),
+  );
+});
+check('a slide with a photo paints it behind the words', photoPainted);
+
 await dots.nth(0).click();
 await buyer.page.waitForTimeout(600);
 

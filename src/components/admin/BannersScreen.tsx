@@ -5,8 +5,13 @@ import { Banner, BannerSlot, ProductCategory } from '../../types';
 import { ImageField } from './ImageField';
 import { Drawer, EmptyState, Field, btnGhost, btnPrimary, inputClass, useToast } from './ui';
 
+/*
+ * Hero slides used to be a fourth group here, edited with the same form as a
+ * category tile. They are a different thing -- a photograph, three lines, an
+ * offer and a number -- and they have their own screen now. This one keeps the
+ * tiles.
+ */
 const SLOTS: { id: BannerSlot; label: string; hint: string }[] = [
-  { id: 'hero', label: 'Hero Sliders', hint: 'The big rotating banners at the top of the homepage.' },
   { id: 'category', label: 'Categories', hint: 'The tiles under the banner.' },
   { id: 'campaign', label: 'Festival Campaigns', hint: 'Seasonal promotion tiles.' },
 ];
@@ -26,9 +31,11 @@ export const BannersScreen: React.FC = () => {
   const { banners, categories, addBanner, updateBanner, deleteBanner } = useStore();
   const toast = useToast();
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<Omit<Banner, 'id'>>(blank('hero'));
+  const [draft, setDraft] = useState<Omit<Banner, 'id'>>(blank('category'));
 
-  const unlinked = banners.filter((b) => b.isActive && !b.linkedCategory);
+  const unlinked = banners.filter(
+    (b) => b.isActive && b.slot !== 'hero' && !b.linkedCategory,
+  );
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,14 +54,14 @@ export const BannersScreen: React.FC = () => {
         <div>
           <h2 className="font-serif text-xl font-bold text-[#241510]">Images &amp; Banners</h2>
           <p className="text-xs text-[#8C766B]">
-            Everything a visitor sees before they reach a product. The wording stays yours — a tile
-            can read “Diwali Gifting” and open Festive Hampers.
+            The tiles under the hero. The wording stays yours — a tile can read “Diwali Gifting”
+            and open Festive Hampers. The slides at the very top are on Hero Slides.
           </p>
         </div>
         <button
           type="button"
           onClick={() => {
-            setDraft(blank('hero'));
+            setDraft(blank('category'));
             setOpen(true);
           }}
           className={btnPrimary}
@@ -214,39 +221,6 @@ export const BannersScreen: React.FC = () => {
             onChange={(image) => setDraft({ ...draft, image })}
             aspect="wide"
           />
-          {/*
-            Only hero slides carry an offer, and a hero slide without one is not
-            shown: the carousel opens on the shop itself, and the slides after
-            it are what is on offer. Said here rather than discovered by
-            wondering why a slide never appeared.
-          */}
-          {draft.slot === 'hero' && (
-            <>
-              <Field
-                label="Coupon code to advertise"
-                hint="The amount is read from the coupon, so changing the code's value changes the slide too."
-              >
-                <input
-                  value={draft.couponCode ?? ''}
-                  onChange={(e) => setDraft({ ...draft, couponCode: e.target.value.toUpperCase() })}
-                  placeholder="FESTIVE15"
-                  className={`${inputClass} font-mono uppercase`}
-                />
-              </Field>
-              <Field
-                label="Or the offer in your own words"
-                hint="Used when there is no coupon code. A hero slide with neither is not shown."
-              >
-                <input
-                  value={draft.offerText ?? ''}
-                  onChange={(e) => setDraft({ ...draft, offerText: e.target.value })}
-                  placeholder="Free delivery on orders over ₹499"
-                  className={inputClass}
-                />
-              </Field>
-            </>
-          )}
-
           <Field
             label="Shows products from"
             hint="A tile with no category opens an empty shop."
